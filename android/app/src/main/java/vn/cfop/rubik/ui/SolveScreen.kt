@@ -21,9 +21,12 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -50,6 +53,13 @@ private val STAGE_TIPS = mapOf(
 
 /** Flat move list with stage boundaries. */
 private data class FlatMove(val stageIndex: Int, val move: String)
+
+/** Inverse of one move: "R" <-> "R'", "R2" stays "R2". */
+private fun invertMove(m: String): String = when {
+    m.endsWith("'") -> m.dropLast(1)
+    m.endsWith("2") -> m
+    else -> m + "'"
+}
 
 @Composable
 fun SolveScreen(
@@ -79,14 +89,56 @@ fun SolveScreen(
     var autoPlay by remember { mutableStateOf(false) }
     val total = flat.size
 
-    // Current cube state
-    val currentState = remember(initialState, current) {
+    // Facelet state after the first k moves.
+    fun stateAt(k: Int): IntArray {
         val cube = Cube(initialState)
-        for (i in 0 until current) {
+        for (i in 0 until k) {
             cube.apply(flat[i].move)
         }
-        cube.s
+        return cube.s
     }
+
+    // --- 3D animation state ---
+    // baseState = facelets shown as the animation base (state before
+    // the animated move). animMove = the move being turned, progress 0..1.
+    var baseState by remember { mutableStateOf(initialState.copyOf()) }
+    var animMove by remember { mutableStateOf<String?>(null) }
+    val animProgress = remember { Animatable(0f) }
+    var lastCurrent by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(current) {
+        val delta = current - lastCurrent
+        lastCurrent = current
+        when (delta) {
+            1 -> {
+                // One step forward: animate the move just applied.
+                val mv = flat[current - 1].move
+                baseState = stateAt(current - 1)
+                animMove = mv
+                animProgress.snapTo(0f)
+                animProgress.animateTo(1f, tween(450))
+                baseState = stateAt(current)
+                animMove = null
+            }
+            -1 -> {
+                // One step back: animate the inverse of the move undone.
+                val mv = flat[current].move
+                baseState = stateAt(current + 1)
+                animMove = invertMove(mv)
+                animProgress.snapTo(0f)
+                animProgress.animateTo(1f, tween(450))
+                baseState = stateAt(current)
+                animMove = null
+            }
+            else -> {
+                // Jump (chip tap / reset): snap, no animation.
+                baseState = stateAt(current)
+                animMove = null
+                animProgress.snapTo(0f)
+            }
+        }
+    }
+
     val done = current >= total
     val currentStageIndex = if (done) stages.size - 1 else flat[current].stageIndex
 
@@ -124,7 +176,17 @@ fun SolveScreen(
         )
         Spacer(Modifier.height(12.dp))
 
-        CubeNet(state = currentState, stickerSize = 26.dp)
+        Cube3DView(
+            state = baseState,
+            animMove = animMove,
+            animProgress = animProgress.value,
+        )
+        Text(
+            "Kéo để xoay khối xem các mặt",
+            fontSize = 12.sp,
+            color = Color.Gray,
+            modifier = Modifier.padding(top = 4.dp),
+        )
         Spacer(Modifier.height(16.dp))
 
         // Controls
