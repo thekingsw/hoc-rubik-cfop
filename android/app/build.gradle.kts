@@ -21,7 +21,9 @@ android {
     // The keystore is stored base64-encoded (debug.keystore.b64) and
     // decoded at configuration time. Debug keys are not sensitive.
     signingConfigs {
-        create("debug") {
+        // Configure the built-in debug signing config (AGP already creates
+        // one named "debug", so use getByName instead of create).
+        getByName("debug") {
             val b64File = file("debug.keystore.b64")
             val ksFile = file("debug.keystore")
             if (!ksFile.exists() && b64File.exists()) {
