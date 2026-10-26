@@ -1,3 +1,5 @@
+import java.util.Base64
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -27,7 +29,7 @@ android {
             val b64File = file("debug.keystore.b64")
             val ksFile = file("debug.keystore")
             if (!ksFile.exists() && b64File.exists()) {
-                ksFile.writeBytes(java.util.Base64.getDecoder().decode(b64File.readText().trim()))
+                ksFile.writeBytes(Base64.getDecoder().decode(b64File.readText().trim()))
             }
             storeFile = ksFile
             storePassword = "android"
