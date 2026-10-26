@@ -352,6 +352,90 @@ public final class CfopSolver {
         return out;
     }
 
+    // ------------------------------------------------------------ OLL / PLL highlights
+    // U-layer slots (U facelet first) and their solved colours, for the
+    // UI to highlight what still needs fixing in each last-layer stage.
+
+    private static final int[][] U_EDGES = {{5, 10}, {7, 19}, {3, 37}, {1, 46}};
+    private static final int[][] U_CORNERS = {{8, 9, 20}, {6, 18, 38}, {0, 36, 47}, {2, 45, 11}};
+    private static final int[][] U_EDGE_SOLVED = {{3, 4}, {3, 2}, {3, 1}, {3, 5}};
+    private static final int[][] U_CORNER_SOLVED = {{3, 4, 2}, {3, 2, 1}, {3, 1, 5}, {3, 5, 4}};
+
+    private static int[] toIntArray(List<Integer> list) {
+        int[] out = new int[list.size()];
+        for (int i = 0; i < out.length; i++) {
+            out[i] = list.get(i);
+        }
+        return out;
+    }
+
+    /**
+     * Facelets of the U edges that are not oriented yet (U sticker is not
+     * yellow). Both facelets of each such edge. Shows the EO pattern
+     * (line / L / dot) the user must recognise.
+     */
+    public static int[] ollEoFacelets(int[] s) {
+        List<Integer> out = new ArrayList<>();
+        for (int[] slot : U_EDGES) {
+            if (s[slot[0]] != 3) {
+                out.add(slot[0]);
+                out.add(slot[1]);
+            }
+        }
+        return toIntArray(out);
+    }
+
+    /**
+     * Facelets of the U corners that are not oriented yet (U sticker is
+     * not yellow). All 3 facelets of each such corner.
+     */
+    public static int[] ollCoFacelets(int[] s) {
+        List<Integer> out = new ArrayList<>();
+        for (int[] slot : U_CORNERS) {
+            if (s[slot[0]] != 3) {
+                out.add(slot[0]);
+                out.add(slot[1]);
+                out.add(slot[2]);
+            }
+        }
+        return toIntArray(out);
+    }
+
+    /**
+     * Facelets of the U corners that are not in their solved position yet
+     * (for PLL corners). All 3 facelets of each such corner.
+     */
+    public static int[] pllCornersFacelets(int[] s) {
+        List<Integer> out = new ArrayList<>();
+        for (int i = 0; i < 4; i++) {
+            int[] slot = U_CORNERS[i];
+            int[] want = U_CORNER_SOLVED[i];
+            if (s[slot[0]] != want[0] || s[slot[1]] != want[1] || s[slot[2]] != want[2]) {
+                out.add(slot[0]);
+                out.add(slot[1]);
+                out.add(slot[2]);
+            }
+        }
+        return toIntArray(out);
+    }
+
+    /**
+     * Facelets of the U edges that are not in their solved position yet
+     * (for PLL edges). Both facelets of each such edge.
+     */
+    public static int[] pllEdgesFacelets(int[] s) {
+        List<Integer> out = new ArrayList<>();
+        for (int i = 0; i < 4; i++) {
+            int[] slot = U_EDGES[i];
+            int[] want = U_EDGE_SOLVED[i];
+            if (s[slot[0]] != want[0] || s[slot[1]] != want[1]) {
+                out.add(slot[0]);
+                out.add(slot[1]);
+            }
+        }
+        return toIntArray(out);
+    }
+
     /** IDA* search for one F2L pair, preserving the cross and solved pairs. */
     private static final class F2lSearch {
         private final Cube start;

@@ -142,23 +142,46 @@ fun SolveScreen(
     val done = current >= total
     val currentStageIndex = if (done) stages.size - 1 else flat[current].stageIndex
 
-    // F2L: highlight the two pieces (corner + edge) of the pair being
-    // solved, so the user learns to recognise the pattern. The pieces
-    // move as the solve progresses, so this follows the displayed state.
+    // Highlight what still needs fixing in the current stage, so the user
+    // learns to recognise each pattern. The pieces move as the solve
+    // progresses, so this follows the displayed state.
+    // F2L: the pair's corner + edge. OLL: pieces not oriented yet.
+    // PLL: pieces not in their solved position yet.
     val highlightFacelets: Set<Int> = remember(baseState, currentStageIndex, done) {
         if (done) {
             emptySet()
         } else {
             val st = stages[currentStageIndex]
-            if (st.key == "f2l" && st.pairIndex >= 0) {
-                try {
-                    CfopSolver.f2lPairFacelets(baseState, st.pairIndex).toSet()
-                } catch (e: Exception) {
-                    emptySet()
+            try {
+                when (st.key) {
+                    "f2l" -> if (st.pairIndex >= 0) {
+                        CfopSolver.f2lPairFacelets(baseState, st.pairIndex).toSet()
+                    } else {
+                        emptySet()
+                    }
+                    "oll_eo" -> CfopSolver.ollEoFacelets(baseState).toSet()
+                    "oll_co" -> CfopSolver.ollCoFacelets(baseState).toSet()
+                    "pll_c" -> CfopSolver.pllCornersFacelets(baseState).toSet()
+                    "pll_e" -> CfopSolver.pllEdgesFacelets(baseState).toSet()
+                    else -> emptySet()
                 }
-            } else {
+            } catch (e: Exception) {
                 emptySet()
             }
+        }
+    }
+
+    // Stage-specific hint for the highlight.
+    val highlightHint: String? = if (done || highlightFacelets.isEmpty()) {
+        null
+    } else {
+        when (stages[currentStageIndex].key) {
+            "f2l" -> "👀 2 viên cần ghép đang nhấp nháy vàng — tìm chúng trên khối rồi làm theo các nước dưới đây."
+            "oll_eo" -> "👀 Các cạnh chưa lật đúng đang nhấp nháy — nhìn hình chúng tạo thành để nhận biết trường hợp (thẳng / chữ L / chấm)."
+            "oll_co" -> "👀 Các góc chưa xoay đúng đang nhấp nháy — nhìn vị trí chúng để nhận biết trường hợp."
+            "pll_c" -> "👀 Các góc chưa về đúng chỗ đang nhấp nháy — chúng sẽ đổi chỗ cho nhau."
+            "pll_e" -> "👀 Các cạnh chưa về đúng chỗ đang nhấp nháy — chúng sẽ đổi chỗ cho nhau."
+            else -> null
         }
     }
 
@@ -202,9 +225,9 @@ fun SolveScreen(
             animProgress = animProgress.value,
             highlight = highlightFacelets,
         )
-        if (highlightFacelets.isNotEmpty()) {
+        if (highlightHint != null) {
             Text(
-                "👀 2 viên cần ghép đang nhấp nháy vàng — tìm chúng trên khối rồi làm theo các nước dưới đây.",
+                highlightHint,
                 fontSize = 13.sp,
                 color = Color(0xFFE65100),
                 fontWeight = FontWeight.Bold,

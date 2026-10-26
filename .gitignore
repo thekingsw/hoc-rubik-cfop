@@ -6,4 +6,5 @@ debug.keystore
 android/local.properties
 java-test/Test3D.kt
 java-test/TestF2LHighlight.java
+java-test/TestLastLayerHighlight.java
 java-test/classes3d/
