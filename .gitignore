@@ -2,3 +2,4 @@ __pycache__/
 *.pyc
 java-test/classes/
 .local/
+debug.keystore

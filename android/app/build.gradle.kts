@@ -16,7 +16,28 @@ android {
         versionName = "1.0"
     }
 
+    // Fixed debug keystore so every CI build signs with the same key:
+    // updates install over the previous version instead of failing.
+    // The keystore is stored base64-encoded (debug.keystore.b64) and
+    // decoded at configuration time. Debug keys are not sensitive.
+    signingConfigs {
+        create("debug") {
+            val b64File = file("debug.keystore.b64")
+            val ksFile = file("debug.keystore")
+            if (!ksFile.exists() && b64File.exists()) {
+                ksFile.writeBytes(java.util.Base64.getDecoder().decode(b64File.readText().trim()))
+            }
+            storeFile = ksFile
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("debug")
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
