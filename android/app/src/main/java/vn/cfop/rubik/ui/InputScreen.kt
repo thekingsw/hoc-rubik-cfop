@@ -46,6 +46,28 @@ import vn.cfop.rubik.solver.Cube
 
 private val COLOR_NAMES = listOf("Trắng", "Đỏ", "Xanh lá", "Vàng", "Cam", "Xanh dương")
 
+/** Face order for step-by-step input: U R F D L B. */
+private val FACE_NAMES = listOf("Mặt trên", "Mặt phải", "Mặt trước", "Mặt dưới", "Mặt trái", "Mặt sau")
+private val FACE_HINTS = listOf(
+    "Mặt vàng — đặt lên trên",
+    "Mặt cam — bên phải",
+    "Mặt xanh lá — ra trước",
+    "Mặt trắng — ở dưới",
+    "Mặt đỏ — bên trái",
+    "Mặt xanh dương — ở sau",
+)
+/** Centre colour of each face (fixed, cannot change). */
+private val FACE_CENTER_COLORS = listOf(3, 4, 2, 0, 1, 5)
+
+/** Blank cube: centres fixed, every other sticker uncoloured (-1). */
+fun blankState(): IntArray {
+    val s = IntArray(54) { -1 }
+    for (f in 0 until 6) {
+        s[f * 9 + 4] = FACE_CENTER_COLORS[f]
+    }
+    return s
+}
+
 /** Random scramble: 22 moves, no two consecutive moves on the same face. */
 fun randomScramble(): List<String> {
     val faces = listOf("U", "D", "R", "L", "F", "B")
@@ -66,7 +88,10 @@ fun InputScreen(
     initialState: IntArray,
     onSolved: (IntArray, List<CfopSolver.Stage>) -> Unit,
 ) {
+    // Start from the given state: blank on first launch, or the cube
+    // the user already entered when coming back with "Sửa khối".
     var state by remember { mutableStateOf(initialState.copyOf()) }
+    var faceIndex by remember { mutableIntStateOf(0) }
     var selectedColor by remember { mutableIntStateOf(2) } // green
     var showScrambleDialog by remember { mutableStateOf(false) }
     var scrambleText by remember { mutableStateOf("") }
@@ -75,7 +100,48 @@ fun InputScreen(
     val scope = rememberCoroutineScope()
 
     val counts = IntArray(6) { c -> state.count { it == c } }
-    val valid = counts.all { it == 9 }
+    val uncoloured = state.count { it == -1 }
+
+    fun faceComplete(f: Int): Boolean {
+        for (k in 0 until 9) {
+            if (k == 4) continue
+            if (state[f * 9 + k] == -1) return false
+        }
+        return true
+    }
+
+    val currentFaceComplete = faceComplete(faceIndex)
+    val isLastFace = faceIndex == 5
+
+    fun trySolve() {
+        if (uncoloured > 0) {
+            val badFaces = (0 until 6).filter { !faceComplete(it) }
+                .joinToString(", ") { FACE_NAMES[it] }
+            error = "Còn $uncoloured ô chưa tô: $badFaces. Anh tô đủ rồi bấm lại nhé."
+            return
+        }
+        val bad = (0 until 6).filter { counts[it] != 9 }
+        if (bad.isNotEmpty()) {
+            val msg = bad.joinToString(", ") { "${COLOR_NAMES[it]} (${counts[it]}/9)" }
+            error = "Sai số lượng màu: $msg. Mỗi màu cần đúng 9 ô — anh kiểm tra lại các mặt nhé."
+            return
+        }
+        solving = true
+        error = null
+        scope.launch {
+            try {
+                val stages = withContext(Dispatchers.Default) {
+                    CfopSolver.solve(Cube(state))
+                }
+                onSolved(state.copyOf(), stages)
+            } catch (e: Exception) {
+                error = "Khối này không giải được — có thể anh nhập sai một vài ô " +
+                    "(ví dụ góc bị xoay sai hướng). Anh kiểm tra lại các mặt nhé."
+            } finally {
+                solving = false
+            }
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -91,10 +157,76 @@ fun InputScreen(
         )
         Spacer(Modifier.height(4.dp))
         Text(
-            "Chạm vào một ô rồi chọn màu. Đặt mặt vàng lên trên, mặt xanh lá ra trước.",
+            "Đặt mặt vàng lên trên, mặt xanh lá ra trước, rồi nhập từng mặt.",
             fontSize = 14.sp,
             color = Color.Gray,
         )
+        Spacer(Modifier.height(8.dp))
+
+        // 3D cube: colours appear as the user fills them in; it turns
+        // to show the face being edited.
+        Cube3DView(
+            state = state,
+            animMove = null,
+            animProgress = 0f,
+            viewFace = faceIndex,
+        )
+        Text(
+            "Kéo để xoay khối xem các mặt",
+            fontSize = 12.sp,
+            color = Color.Gray,
+            modifier = Modifier.padding(top = 2.dp),
+        )
+        Spacer(Modifier.height(12.dp))
+
+        // Current face header
+        Text(
+            "${FACE_NAMES[faceIndex]} (${faceIndex + 1}/6) — ${FACE_HINTS[faceIndex]}",
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Bold,
+        )
+        Text(
+            if (currentFaceComplete) "Mặt này đã đủ 8 ô ✓" else "Chạm vào một ô rồi chọn màu. Ô giữa đã cố định.",
+            fontSize = 13.sp,
+            color = if (currentFaceComplete) Color(0xFF388E3C) else Color.Gray,
+            modifier = Modifier.padding(top = 2.dp),
+        )
+        Spacer(Modifier.height(10.dp))
+
+        // 3x3 grid for the current face
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            for (r in 0 until 3) {
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    for (c in 0 until 3) {
+                        val k = r * 3 + c
+                        val idx = faceIndex * 9 + k
+                        val isCentre = k == 4
+                        Box(
+                            modifier = Modifier
+                                .size(52.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(cubeColour(state[idx]))
+                                .border(
+                                    width = if (isCentre) 3.dp else 1.dp,
+                                    color = if (isCentre) Color.Black else Color(0xFF9E9E9E),
+                                    shape = RoundedCornerShape(8.dp),
+                                )
+                                .clickable(enabled = !isCentre) {
+                                    val next = state.copyOf()
+                                    next[idx] = selectedColor
+                                    state = next
+                                    error = null
+                                },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            if (isCentre) {
+                                Text("●", fontSize = 12.sp, color = Color.Black.copy(alpha = 0.5f))
+                            }
+                        }
+                    }
+                }
+            }
+        }
         Spacer(Modifier.height(12.dp))
 
         // Palette
@@ -120,19 +252,7 @@ fun InputScreen(
             color = Color.Gray,
             modifier = Modifier.padding(top = 6.dp),
         )
-        Spacer(Modifier.height(12.dp))
-
-        CubeNet(
-            state = state,
-            onStickerClick = { idx ->
-                val next = state.copyOf()
-                next[idx] = selectedColor
-                state = next
-                error = null
-            },
-            stickerSize = 30.dp,
-        )
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(8.dp))
 
         // Colour counters
         Row(
@@ -167,11 +287,48 @@ fun InputScreen(
             Spacer(Modifier.height(8.dp))
         }
 
+        // Navigation: back / next (or finish on the last face)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(
+                onClick = { if (faceIndex > 0) faceIndex-- },
+                enabled = faceIndex > 0,
+            ) { Text("← Mặt trước") }
+            Button(
+                onClick = {
+                    if (isLastFace) {
+                        trySolve()
+                    } else if (currentFaceComplete) {
+                        error = null
+                        faceIndex++
+                    } else {
+                        val missing = (0 until 9).count { k -> k != 4 && state[faceIndex * 9 + k] == -1 }
+                        error = "Mặt này còn $missing ô chưa tô. Anh tô đủ rồi bấm tiếp nhé."
+                    }
+                },
+                enabled = !solving,
+                modifier = Modifier.weight(1f),
+            ) {
+                if (solving) {
+                    CircularProgressIndicator(
+                        color = Color.White,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Text("  Đang tính cách giải...", modifier = Modifier.padding(start = 8.dp))
+                } else if (isLastFace) {
+                    Text("Xong — Giải khối này →", fontSize = 15.sp)
+                } else {
+                    Text("Mặt tiếp theo →", fontSize = 15.sp)
+                }
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick = {
                 val cube = Cube()
                 cube.applySeq(randomScramble())
                 state = cube.s.copyOf()
+                faceIndex = 5
                 error = null
             }) { Text("Xáo trộn") }
             OutlinedButton(onClick = {
@@ -179,49 +336,12 @@ fun InputScreen(
                 showScrambleDialog = true
             }) { Text("Nhập ký hiệu") }
             OutlinedButton(onClick = {
-                state = Cube().s.copyOf()
+                state = blankState()
+                faceIndex = 0
                 error = null
             }) { Text("Đặt lại") }
         }
         Spacer(Modifier.height(12.dp))
-
-        Button(
-            onClick = {
-                if (!valid) {
-                    val bad = (0 until 6).filter { counts[it] != 9 }
-                        .joinToString(", ") { "${COLOR_NAMES[it]} (${counts[it]}/9)" }
-                    error = "Chưa đủ màu: $bad. Mỗi màu cần đúng 9 ô."
-                    return@Button
-                }
-                solving = true
-                error = null
-                scope.launch {
-                    try {
-                        val stages = withContext(Dispatchers.Default) {
-                            CfopSolver.solve(Cube(state))
-                        }
-                        onSolved(state.copyOf(), stages)
-                    } catch (e: Exception) {
-                        error = "Không giải được khối này: ${e.message}"
-                    } finally {
-                        solving = false
-                    }
-                }
-            },
-            enabled = !solving,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            if (solving) {
-                CircularProgressIndicator(
-                    color = Color.White,
-                    modifier = Modifier.size(20.dp),
-                )
-                Text("  Đang tính cách giải...", modifier = Modifier.padding(start = 8.dp))
-            } else {
-                Text("Giải khối này →", fontSize = 16.sp)
-            }
-        }
-        Spacer(Modifier.height(8.dp))
         Text(
             "App hướng dẫn theo phương pháp CFOP 2-look: chữ thập → 4 cặp F2L → OLL → PLL.",
             fontSize = 13.sp,
@@ -253,6 +373,7 @@ fun InputScreen(
                         val cube = Cube()
                         cube.applySeq(moves)
                         state = cube.s.copyOf()
+                        faceIndex = 5
                         error = null
                         showScrambleDialog = false
                     } catch (e: Exception) {

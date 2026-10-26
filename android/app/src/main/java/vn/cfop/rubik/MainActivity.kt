@@ -12,6 +12,7 @@ import vn.cfop.rubik.solver.CfopSolver
 import vn.cfop.rubik.solver.Cube
 import vn.cfop.rubik.ui.InputScreen
 import vn.cfop.rubik.ui.SolveScreen
+import vn.cfop.rubik.ui.blankState
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -19,7 +20,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             MaterialTheme {
                 var showSolve by remember { mutableStateOf(false) }
-                var cubeState by remember { mutableStateOf(Cube().s) }
+                var cubeState by remember { mutableStateOf(blankState()) }
                 var stages by remember { mutableStateOf<List<CfopSolver.Stage>>(emptyList()) }
 
                 if (showSolve) {
@@ -28,7 +29,7 @@ class MainActivity : ComponentActivity() {
                         stages = stages,
                         onBack = { showSolve = false },
                         onNewCube = {
-                            cubeState = Cube().s
+                            cubeState = blankState()
                             stages = emptyList()
                             showSolve = false
                         },

@@ -1,10 +1,16 @@
 package vn.cfop.rubik.ui
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
@@ -17,8 +23,9 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 
-/** Solver colour codes (0..5) -> display colours. */
+/** Solver colour codes (0..5) -> display colours; -1 = not coloured yet. */
 fun cubeColour(code: Int): Color = when (code) {
+    -1 -> Color(0xFF616161) // uncoloured (dark grey)
     0 -> Color(0xFFF5F5F5) // white
     1 -> Color(0xFFD32F2F) // red
     2 -> Color(0xFF43A047) // green
@@ -27,15 +34,28 @@ fun cubeColour(code: Int): Color = when (code) {
     else -> Color(0xFF1E88E5) // blue
 }
 
+/** View angles that bring a face front-and-centre. Face: 0=U 1=R 2=F 3=D 4=L 5=B. */
+fun faceViewAngles(face: Int): Pair<Float, Float> = when (face) {
+    0 -> -35f to 55f // U: look down at the top
+    1 -> -90f to 20f // R
+    2 -> 0f to 20f // F
+    3 -> -35f to -55f // D: look up at the bottom
+    4 -> 90f to 20f // L
+    else -> 180f to 20f // B
+}
+
 /**
  * Interactive 3D Rubik's cube.
  *
  * Drag to rotate the view. [animMove] + [animProgress] (0..1) animate
  * one move: the layer turns while the rest of the cube stays put.
  *
- * @param state solver facelet colours (54 entries) to display.
+ * @param state solver facelet colours (54 entries) to display (-1 = uncoloured).
  * @param animMove the move being animated (e.g. "R", "U'", "F2"), or null.
  * @param animProgress 0..1, how far [animMove] has turned.
+ * @param highlight facelet indices to pulse-highlight (e.g. the F2L pair).
+ * @param viewFace face to bring front-and-centre (0=U 1=R 2=F 3=D 4=L 5=B),
+ *   or null to keep the current view. Applied whenever it changes.
  */
 @Composable
 fun Cube3DView(
@@ -43,9 +63,32 @@ fun Cube3DView(
     animMove: String?,
     animProgress: Float,
     modifier: Modifier = Modifier,
+    highlight: Set<Int> = emptySet(),
+    viewFace: Int? = null,
 ) {
     var azimuth by remember { mutableFloatStateOf(-35f) }
     var elevation by remember { mutableFloatStateOf(28f) }
+
+    // When the caller asks for a face, turn the cube to show it.
+    LaunchedEffect(viewFace) {
+        if (viewFace != null) {
+            val (az, el) = faceViewAngles(viewFace)
+            azimuth = az
+            elevation = el
+        }
+    }
+
+    // Pulsing alpha for highlighted stickers.
+    val infiniteTransition = rememberInfiniteTransition(label = "highlight")
+    val pulse by infiniteTransition.animateFloat(
+        initialValue = 0.45f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(550),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "pulse",
+    )
 
     val anim = remember(animMove) { animMove?.let { moveAnimSpec(it) } }
 
@@ -66,7 +109,7 @@ fun Cube3DView(
         val stickers = buildStickers(state, anim, animProgress)
 
         // Project + keep only stickers facing the viewer.
-        data class Draw(val path: Path, val colour: Color, val depth: Float)
+        data class Draw(val path: Path, val colour: Color, val depth: Float, val isHighlight: Boolean)
         val draws = ArrayList<Draw>(54)
         for (st in stickers) {
             // View-space normal: facing the viewer means z > 0.
@@ -85,13 +128,27 @@ fun Cube3DView(
                 lineTo(pts[3].x, pts[3].y)
                 close()
             }
-            draws.add(Draw(path, cubeColour(st.colour), centre.depth))
+            draws.add(Draw(path, cubeColour(st.colour), centre.depth, st.index in highlight))
         }
         // Painter's algorithm: farthest first.
         draws.sortBy { it.depth }
         for (d in draws) {
             drawPath(d.path, d.colour)
-            drawPath(d.path, Color(0xFF212121), style = Stroke(width = 1.5.dp.toPx()))
+            if (d.isHighlight) {
+                // Bright pulsing border so the pieces stand out.
+                drawPath(
+                    d.path,
+                    Color(0xFFFFEB3B).copy(alpha = pulse),
+                    style = Stroke(width = 4.dp.toPx()),
+                )
+                drawPath(
+                    d.path,
+                    Color.White.copy(alpha = pulse),
+                    style = Stroke(width = 1.5.dp.toPx()),
+                )
+            } else {
+                drawPath(d.path, Color(0xFF212121), style = Stroke(width = 1.5.dp.toPx()))
+            }
         }
     }
 }

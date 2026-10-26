@@ -128,8 +128,9 @@ fun moveAnimSpec(move: String): MoveAnim {
 
 /** One sticker to draw: its 4 corners in cube space, colour, and normal. */
 data class Sticker(
+    val index: Int,          // facelet index 0..53
     val corners: List<Vec3>, // 4 corners, cube space
-    val colour: Int,         // solver colour code 0..5
+    val colour: Int,         // solver colour code 0..5, -1 = uncoloured
     val normal: Vec3,        // outward normal, cube space
     val centre: Vec3,        // sticker centre, cube space
 )
@@ -185,7 +186,7 @@ fun buildStickers(state: IntArray, anim: MoveAnim?, progress: Float): List<Stick
         }
         val nRotated = if (inLayer && angle != 0f) rotateAboutAxis(n, anim.axis, angle) else n
         val cRotated = if (inLayer && angle != 0f) rotateAboutAxis(centre, anim.axis, angle) else centre
-        out.add(Sticker(corners, state[i], nRotated, cRotated))
+        out.add(Sticker(i, corners, state[i], nRotated, cRotated))
     }
     return out
 }

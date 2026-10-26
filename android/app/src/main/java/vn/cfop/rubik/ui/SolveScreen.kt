@@ -142,6 +142,26 @@ fun SolveScreen(
     val done = current >= total
     val currentStageIndex = if (done) stages.size - 1 else flat[current].stageIndex
 
+    // F2L: highlight the two pieces (corner + edge) of the pair being
+    // solved, so the user learns to recognise the pattern. The pieces
+    // move as the solve progresses, so this follows the displayed state.
+    val highlightFacelets: Set<Int> = remember(baseState, currentStageIndex, done) {
+        if (done) {
+            emptySet()
+        } else {
+            val st = stages[currentStageIndex]
+            if (st.key == "f2l" && st.pairIndex >= 0) {
+                try {
+                    CfopSolver.f2lPairFacelets(baseState, st.pairIndex).toSet()
+                } catch (e: Exception) {
+                    emptySet()
+                }
+            } else {
+                emptySet()
+            }
+        }
+    }
+
     LaunchedEffect(autoPlay, current) {
         if (autoPlay && current < total) {
             delay(900)
@@ -180,7 +200,17 @@ fun SolveScreen(
             state = baseState,
             animMove = animMove,
             animProgress = animProgress.value,
+            highlight = highlightFacelets,
         )
+        if (highlightFacelets.isNotEmpty()) {
+            Text(
+                "👀 2 viên cần ghép đang nhấp nháy vàng — tìm chúng trên khối rồi làm theo các nước dưới đây.",
+                fontSize = 13.sp,
+                color = Color(0xFFE65100),
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+        }
         Text(
             "Kéo để xoay khối xem các mặt",
             fontSize = 12.sp,

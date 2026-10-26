@@ -25,11 +25,18 @@ public final class CfopSolver {
         public final String key;
         public final String title;
         public final List<String> moves;
+        /** F2L pair index (0..3) for "f2l" stages, -1 otherwise. */
+        public final int pairIndex;
 
         public Stage(String key, String title, List<String> moves) {
+            this(key, title, moves, -1);
+        }
+
+        public Stage(String key, String title, List<String> moves, int pairIndex) {
             this.key = key;
             this.title = title;
             this.moves = moves;
+            this.pairIndex = pairIndex;
         }
 
         public int moveCount() {
@@ -304,6 +311,45 @@ public final class CfopSolver {
             }
         }
         return true;
+    }
+
+    /**
+     * Facelet indices of an F2L pair's two pieces in the given state:
+     * the corner's 3 facelets, then the edge's 2 facelets.
+     * Used by the UI to highlight the pair being solved.
+     */
+    public static int[] f2lPairFacelets(int[] s, int pairIdx) {
+        int[] cc = F2L_CORNER_COLOURS[pairIdx];
+        int[] ec = F2L_EDGE_COLOURS[pairIdx];
+        int[] out = new int[5];
+        boolean foundCorner = false;
+        for (int[] slot : CORNER_SLOTS) {
+            int a = s[slot[0]], b = s[slot[1]], c = s[slot[2]];
+            if ((a == cc[0] || a == cc[1] || a == cc[2])
+                    && (b == cc[0] || b == cc[1] || b == cc[2])
+                    && (c == cc[0] || c == cc[1] || c == cc[2])
+                    && a != b && b != c && a != c) {
+                out[0] = slot[0];
+                out[1] = slot[1];
+                out[2] = slot[2];
+                foundCorner = true;
+                break;
+            }
+        }
+        boolean foundEdge = false;
+        for (int[] slot : EDGE_SLOTS) {
+            int a = s[slot[0]], b = s[slot[1]];
+            if ((a == ec[0] && b == ec[1]) || (a == ec[1] && b == ec[0])) {
+                out[3] = slot[0];
+                out[4] = slot[1];
+                foundEdge = true;
+                break;
+            }
+        }
+        if (!foundCorner || !foundEdge) {
+            throw new IllegalStateException("F2L pair pieces not found: " + pairIdx);
+        }
+        return out;
     }
 
     /** IDA* search for one F2L pair, preserving the cross and solved pairs. */
@@ -746,7 +792,7 @@ public final class CfopSolver {
             solvedPairs.add(bestPair);
             remaining.remove((Integer) bestPair);
             stages.add(new Stage("f2l", "Cặp F2L " + solvedPairs.size() + "/4: "
-                    + F2L_LABELS[bestPair], mv));
+                    + F2L_LABELS[bestPair], mv, bestPair));
         }
         if (!f2lSolved(c)) {
             throw new IllegalStateException("F2L did not solve");
