@@ -1,5 +1,6 @@
 package vn.cfop.rubik.ui
 
+import vn.cfop.rubik.solver.CfopSolver
 import vn.cfop.rubik.solver.Cube
 
 /**
@@ -27,6 +28,29 @@ fun TrainingCase.patternState(): IntArray {
     val cube = Cube()
     cube.applySeq(setup)
     return cube.s
+}
+
+/**
+ * Facelets to highlight on the 3D pattern cube: the pieces that are
+ * out of place and need moving, so the user sees what to look for
+ * instead of guessing. F2L: the pair's corner + edge (all training
+ * F2L cases are the FR pair, green-orange). OLL: pieces not oriented
+ * yet. PLL: pieces not in their solved position yet.
+ */
+fun TrainingCase.highlightFacelets(): Set<Int> {
+    val pattern = patternState()
+    return try {
+        when (stage) {
+            "f2l" -> CfopSolver.f2lPairFacelets(pattern, 0).toSet()
+            "oll" -> (CfopSolver.ollEoFacelets(pattern).toList()
+                + CfopSolver.ollCoFacelets(pattern).toList()).toSet()
+            "pll" -> (CfopSolver.pllCornersFacelets(pattern).toList()
+                + CfopSolver.pllEdgesFacelets(pattern).toList()).toSet()
+            else -> emptySet()
+        }
+    } catch (e: Exception) {
+        emptySet()
+    }
 }
 
 // ------------------------------------------------------------ F2L
@@ -80,9 +104,9 @@ val OLL_CASES: List<TrainingCase> = listOf(
     TrainingCase("eo-line", "oll", "basic", "Đường thẳng", "2 cạnh đối nhau chưa lật (tạo thành đường thẳng trên mặt vàng).", listOf("F", "R", "U", "R'", "U'", "F'"), listOf("F", "U", "R", "U'", "R'", "F'"), "Nhìn 2 cạnh vàng chưa lên trên: chúng nằm đối nhau thành 1 đường thẳng."),
     TrainingCase("eo-l", "oll", "basic", "Chữ L", "2 cạnh kề nhau chưa lật (tạo thành hình chữ L trên mặt vàng).", listOf("F", "U", "R", "U'", "R'", "F'"), listOf("F", "R", "U", "R'", "U'", "F'"), "2 cạnh chưa lật nằm kề nhau, tạo thành góc chữ L."),
     TrainingCase("eo-dot", "oll", "basic", "Chấm (4 cạnh)", "Cả 4 cạnh đều chưa lật (không có cạnh vàng nào trên mặt vàng).", listOf("F", "R", "U", "R'", "U'", "F'", "U2", "F", "U", "R", "U'", "R'", "F'"), listOf("F", "R", "U", "R'", "U'", "F'", "U2", "F", "U", "R", "U'", "R'", "F'"), "Làm công thức đường thẳng, xoay U2, rồi làm công thức chữ L."),
-    TrainingCase("co-sune", "oll", "basic", "Sune", "1 góc đã đúng, 3 góc còn lại xoắn theo chiều kim đồng hồ.", listOf("R", "U", "R'", "U", "R", "U'", "R'", "U", "R", "U2", "R'"), listOf("R", "U2", "R'", "U'", "R", "U", "R'", "U'", "R", "U'", "R'"), "Trường hợp hay gặp nhất. Nhớ: góc đúng ở phía trước-bên trái."),
+    TrainingCase("co-sune", "oll", "basic", "Sune", "1 góc đã có màu vàng ở trên, 3 góc còn lại xoắn theo chiều kim đồng hồ.", listOf("R", "U", "R'", "U", "R", "U2", "R'"), listOf("R", "U2", "R'", "U'", "R", "U'", "R'"), "Trường hợp hay gặp nhất. Nhớ: góc đúng ở phía trước-bên trái."),
     TrainingCase("co-antisune", "oll", "basic", "Anti-Sune", "1 góc đã đúng, 3 góc còn lại xoắn ngược chiều kim đồng hồ.", listOf("R", "U2", "R'", "U'", "R", "U'", "R'"), listOf("R", "U", "R'", "U", "R", "U2", "R'"), "Ngược của Sune."),
-    TrainingCase("co-h", "oll", "basic", "Chữ H", "2 góc đối nhau đã đúng, 2 góc còn lại xoắn.", listOf("R", "U", "R'", "U", "R", "U'", "R'", "U", "R", "U'", "R'", "U", "R", "U2", "R'"), listOf("R", "U2", "R'", "U'", "R", "U", "R'", "U'", "R", "U", "R'", "U'", "R", "U'", "R'"), "2 góc đúng nằm đối nhau."),
+    TrainingCase("co-h", "oll", "basic", "Chữ H", "Không có góc nào vàng trên mặt trên — cả 4 góc đều xoắn.", listOf("R", "U", "R'", "U", "R", "U'", "R'", "U", "R", "U2", "R'"), listOf("R", "U2", "R'", "U'", "R", "U", "R'", "U'", "R", "U'", "R'"), "Nhìn mặt vàng: không thấy góc vàng nào thì đây là H."),
     TrainingCase("co-pi", "oll", "basic", "Chữ Pi", "2 góc kề nhau đã đúng, 2 góc còn lại xoắn.", listOf("R", "U2", "R2", "U'", "R2", "U'", "R2", "U2", "R"), listOf("R'", "U2", "R2", "U", "R2", "U", "R2", "U2", "R'"), "2 góc đúng nằm kề nhau, tạo thành hình Pi."),
     TrainingCase("co-u", "oll", "basic", "Chữ U", "3 góc đã đúng, 1 góc xoắn (hình chữ U).", listOf("R2", "D", "R'", "U2", "R", "D'", "R'", "U2", "R'"), listOf("R", "U2", "R", "D", "R'", "U2", "R", "D'", "R2"), "Chỉ 1 góc sai, nằm ở góc chữ U."),
 )

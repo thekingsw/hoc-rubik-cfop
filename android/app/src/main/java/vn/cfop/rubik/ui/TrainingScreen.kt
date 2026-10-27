@@ -39,6 +39,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
+import vn.cfop.rubik.solver.CfopSolver
 import vn.cfop.rubik.solver.Cube
 
 private fun invertMove(m: String): String = when {
@@ -282,6 +283,30 @@ private fun CaseDetail(
         }
     }
 
+    // Highlight the pieces that need moving, following them as the
+    // algorithm runs. F2L: the pair's corner + edge. OLL: pieces not
+    // oriented yet. PLL: pieces not in place yet.
+    val highlight: Set<Int> = remember(baseState, case) {
+        try {
+            when (case.stage) {
+                "f2l" -> CfopSolver.f2lPairFacelets(baseState, 0).toSet()
+                "oll" -> (CfopSolver.ollEoFacelets(baseState).toList()
+                    + CfopSolver.ollCoFacelets(baseState).toList()).toSet()
+                "pll" -> (CfopSolver.pllCornersFacelets(baseState).toList()
+                    + CfopSolver.pllEdgesFacelets(baseState).toList()).toSet()
+                else -> emptySet()
+            }
+        } catch (e: Exception) {
+            emptySet()
+        }
+    }
+    val highlightHint = when (case.stage) {
+        "f2l" -> "👀 2 viên cần ghép đang nhấp nháy vàng — góc và cạnh xanh lá - cam, tìm chúng trước rồi mới xoay."
+        "oll" -> "👀 Các viên chưa đúng đang nhấp nháy — nhìn hình chúng tạo thành để nhận biết trường hợp."
+        "pll" -> "👀 Các viên chưa về đúng chỗ đang nhấp nháy — chúng sẽ đổi chỗ cho nhau."
+        else -> null
+    }
+
     Column {
         OutlinedButton(onClick = onBack) { Text("← Danh sách") }
         Spacer(Modifier.height(8.dp))
@@ -294,8 +319,18 @@ private fun CaseDetail(
             state = baseState,
             animMove = animMove,
             animProgress = animProgress.value,
+            highlight = highlight,
             modifier = Modifier.fillMaxWidth(),
         )
+        if (highlightHint != null && step == 0) {
+            Text(
+                highlightHint,
+                fontSize = 13.sp,
+                color = Color(0xFFE65100),
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+        }
         Text(
             if (step == 0) "Hình cần tập — khối đang ở trạng thái ví dụ."
             else if (step < total) "Đang làm nước ${step + 1}/$total: ${case.algorithm[step]}"

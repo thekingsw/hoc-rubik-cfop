@@ -20,3 +20,11 @@ java-test/DotSetup.java
 java-test/DotSetup2.java
 java-test/FindDot.java
 java-test/DebugCO.java
+java-test/TestCOMapping.java
+java-test/TestCOPatterns.java
+java-test/TestCaseMatch.kt
+java-test/TestYRot.java
+java-test/TestAllTraining.kt
+java-test/TestExplain.kt
+java-test/classes-co/
+java-test/classes-match/

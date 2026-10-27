@@ -352,6 +352,39 @@ public final class CfopSolver {
         return out;
     }
 
+    /**
+     * Canonical key for an F2L pair's configuration, so the UI can say
+     * which training case a solve step is. The pair's slot is rotated to
+     * FR (via y turns) and the key is the smallest (corner white facelet,
+     * edge first-colour facelet) over the 4 U rotations, so two states
+     * that are the same case up to a U turn share one key.
+     * Returns -1 if the pair's pieces cannot be found.
+     * NOTE: only covers the 41 standard cases (other slots solved).
+     * When a pair's pieces sit in another unsolved slot, the key will
+     * not match any training case and the UI falls back to a description.
+     */
+    public static int f2lCaseKey(int[] s, int pairIdx) {
+        // y turns to bring pairIdx's slot to FR: FR=0, FL=3, BR=1, BL=2.
+        int[] yCount = {0, 3, 1, 2};
+        Cube c = new Cube(s);
+        for (int i = 0; i < yCount[pairIdx]; i++) c.apply("y");
+        int[] cc = F2L_CORNER_COLOURS[pairIdx];
+        int[] ec = F2L_EDGE_COLOURS[pairIdx];
+        int best = Integer.MAX_VALUE;
+        try {
+            for (int k = 0; k < 4; k++) {
+                int w = piecePrimaryFacelet(c, cc);
+                int e = piecePrimaryFacelet(c, ec);
+                int key = w * 54 + e;
+                if (key < best) best = key;
+                c.apply("U");
+            }
+        } catch (IllegalStateException ex) {
+            return -1;
+        }
+        return best;
+    }
+
     // ------------------------------------------------------------ OLL / PLL highlights
     // U-layer slots (U facelet first) and their solved colours, for the
     // UI to highlight what still needs fixing in each last-layer stage.

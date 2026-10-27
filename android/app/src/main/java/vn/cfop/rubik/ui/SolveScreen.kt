@@ -98,6 +98,82 @@ fun SolveScreen(
         return cube.s
     }
 
+    // --- Case explanations: which training case each stage is, in plain
+    // language, so the user can connect the solver's moves to practice.
+    // Computed once from the state at each stage's start.
+    val stageExplanations = remember(stages, initialState) {
+        stages.mapIndexed { si, st ->
+            val startState = stateAt(stageStarts[si])
+            when (st.key) {
+                "cross" -> STAGE_TIPS["cross"] ?: ""
+                "f2l" -> {
+                    if (st.moves.isEmpty()) {
+                        "Cặp này đã đúng chỗ rồi, không cần làm gì."
+                    } else {
+                        val pos = describeF2LPosition(startState, st.pairIndex)
+                        val matched = f2lCaseFor(startState, st.pairIndex)
+                        if (matched != null) {
+                            "Đây là trường hợp ${matched.name} trong phần Luyện tập → F2L. $pos"
+                        } else {
+                            "Trường hợp này chưa có trong 41 bài luyện. $pos Cứ làm theo các nước dưới đây — app sẽ tách cặp ra rồi ghép lại."
+                        }
+                    }
+                }
+                "oll_eo" -> {
+                    if (isJustUTurns(st.moves)) {
+                        "Chỉ cần xoay mặt trên cho khớp, không cần công thức."
+                    } else {
+                        val pattern = ollEoPatternName(startState)
+                        if (pattern != null) {
+                            "Trường hợp “$pattern” trong phần Luyện tập → OLL (lật cạnh). Công thức dưới đây sẽ đưa tất cả cạnh về màu vàng."
+                        } else {
+                            STAGE_TIPS["oll_eo"] ?: ""
+                        }
+                    }
+                }
+                "oll_co" -> {
+                    if (isJustUTurns(st.moves)) {
+                        "Chỉ cần xoay mặt trên cho khớp, không cần công thức."
+                    } else {
+                        val co = ollCoCase(st.moves)
+                        if (co != null) {
+                            "Trường hợp “${co.name}” trong phần Luyện tập → OLL (xoay góc). ${co.recognition}"
+                        } else if (isCoSuneFallback(st.moves)) {
+                            "Trường hợp T/L (không nằm trong 5 công thức góc) — làm Sune 1 lần rồi nhìn lại, sẽ ra 1 trong 5 hình kia."
+                        } else {
+                            STAGE_TIPS["oll_co"] ?: ""
+                        }
+                    }
+                }
+                "pll_c" -> {
+                    if (isJustUTurns(st.moves)) {
+                        "Chỉ cần xoay mặt trên cho khớp, không cần công thức."
+                    } else {
+                        val pc = pllCase(st.moves, corners = true)
+                        if (pc != null) {
+                            "Trường hợp “${pc.name}” trong phần Luyện tập → PLL (đổi góc). ${pc.recognition}"
+                        } else {
+                            STAGE_TIPS["pll_c"] ?: ""
+                        }
+                    }
+                }
+                "pll_e" -> {
+                    if (isJustUTurns(st.moves)) {
+                        "Chỉ cần xoay mặt trên cho khớp, không cần công thức."
+                    } else {
+                        val pe = pllCase(st.moves, corners = false)
+                        if (pe != null) {
+                            "Trường hợp “${pe.name}” trong phần Luyện tập → PLL (đổi cạnh). ${pe.recognition}"
+                        } else {
+                            STAGE_TIPS["pll_e"] ?: ""
+                        }
+                    }
+                }
+                else -> STAGE_TIPS[st.key] ?: ""
+            }
+        }
+    }
+
     // --- 3D animation state ---
     // baseState = facelets shown as the animation base (state before
     // the animated move). animMove = the move being turned, progress 0..1.
@@ -314,7 +390,7 @@ fun SolveScreen(
                     )
                 }
                 Text(
-                    STAGE_TIPS[stage.key] ?: "",
+                    stageExplanations[si],
                     fontSize = 13.sp,
                     color = Color(0xFF616161),
                     modifier = Modifier.padding(top = 2.dp),
