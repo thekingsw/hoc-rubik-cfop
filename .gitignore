@@ -8,3 +8,15 @@ java-test/Test3D.kt
 java-test/TestF2LHighlight.java
 java-test/TestLastLayerHighlight.java
 java-test/classes3d/
+java-test/GenF2L.java
+java-test/GenF2LAll.java
+java-test/GenF2LSlot.java
+java-test/TestTrainingData.java
+java-test/TestOLLPLLAlgs.java
+java-test/DebugUb.java
+java-test/DebugUb2.java
+java-test/DotCase.java
+java-test/DotSetup.java
+java-test/DotSetup2.java
+java-test/FindDot.java
+java-test/DebugCO.java

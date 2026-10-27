@@ -87,6 +87,7 @@ fun randomScramble(): List<String> {
 fun InputScreen(
     initialState: IntArray,
     onSolved: (IntArray, List<CfopSolver.Stage>) -> Unit,
+    onBack: () -> Unit = {},
 ) {
     // Start from the given state: blank on first launch, or the cube
     // the user already entered when coming back with "Sửa khối".
@@ -150,6 +151,9 @@ fun InputScreen(
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        Row(modifier = Modifier.fillMaxWidth()) {
+            OutlinedButton(onClick = onBack) { Text("← Trang chính") }
+        }
         Text(
             "Nhập khối Rubik của anh",
             fontSize = 22.sp,
