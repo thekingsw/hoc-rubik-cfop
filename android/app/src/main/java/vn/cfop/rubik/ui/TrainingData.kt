@@ -75,28 +75,28 @@ val F2L_CASES: List<TrainingCase> = listOf(
     ),
     TrainingCase(
         "f2l-std-2", "f2l", "basic", "Chuẩn 2: Trắng phải",
-        "Góc có mặt TRẮNG hướng sang PHẢI (nhìn thấy màu trắng ở mặt bên phải). Cạnh nằm ở tầng trên.",
-        listOf("R", "U", "R'"), listOf("R", "U'", "R'"),
-        "Thấy trắng ở mặt phải → xoay U để cạnh về đúng vị trí, rồi R U R'."
+        "Góc có mặt TRẮNG hướng sang PHẢI (nhìn từ bên phải thấy màu trắng ở viên góc).",
+        listOf("F'", "U", "F"), listOf("F'", "U'", "F"),
+        "Thấy trắng ở mặt phải → F' U F để đưa cặp vào khe."
     ),
     TrainingCase(
         "f2l-std-3", "f2l", "basic", "Chuẩn 3: Trắng trước",
-        "Góc có mặt TRẮNG hướng ra TRƯỚC (nhìn thấy màu trắng ở mặt trước). Cạnh nằm ở tầng trên.",
-        listOf("F'", "U", "F"), listOf("F'", "U'", "F"),
-        "Thấy trắng ở mặt trước → xoay U để cạnh về đúng vị trí, rồi F' U F."
+        "Góc có mặt TRẮNG hướng ra TRƯỚC (nhìn từ phía trước thấy màu trắng ở viên góc).",
+        listOf("F", "U'", "F'"), listOf("F", "U", "F'"),
+        "Thấy trắng ở mặt trước → F U' F' để đưa cặp vào khe."
     ),
     // --- Hất viên kẹt lên (extraction) ---
     TrainingCase(
         "f2l-ext-1", "f2l", "basic", "Hất góc kẹt lên",
-        "Góc đang KẸT ở tầng dưới (trong khe FR nhưng sai hướng). Dùng chính trigger của khe để hất nó lên tầng trên.",
-        listOf("R", "U", "R'"), listOf("R", "U'", "R'"),
-        "Góc kẹt ở khe FR → R U R' hất lên tầng trên, rồi xử lý như 3 trường hợp chuẩn."
+        "Góc đang KẸT ở khe (đã ở vị trí nhưng sai hướng). Dùng R U R' U' để hất nó lên rồi làm lại.",
+        listOf("R", "U", "R'", "U'"), listOf("U", "R", "U'", "R'"),
+        "Góc kẹt → R U R' U' đưa lên tầng trên, rồi nhận diện 1 trong 3 trường hợp chuẩn."
     ),
     TrainingCase(
         "f2l-ext-2", "f2l", "basic", "Hất cạnh kẹt lên",
-        "Cạnh đang KẸT ở tầng dưới. Đưa nó lên tầng trên trước rồi mới ghép cặp.",
-        listOf("F'", "U", "F"), listOf("F'", "U'", "F"),
-        "Cạnh kẹt → F' U F đưa lên, rồi tìm góc để ghép."
+        "Cạnh đang KẸT ở khe. Dùng F' U' F U để đưa nó lên tầng trên trước rồi mới ghép cặp.",
+        listOf("F'", "U'", "F", "U"), listOf("U'", "F'", "U", "F"),
+        "Cạnh kẹt → F' U' F U đưa lên, rồi tìm góc để ghép thành 1 trong 3 trường hợp chuẩn."
     ),
     // --- Xoay khối đưa khe về FR ---
     TrainingCase(
