@@ -16,6 +16,15 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
+        // Git SHA của bản build này — dùng để so sánh với bản mới nhất trên GitHub
+        // khi kiểm tra cập nhật. Lấy từ git lúc build, không cần sửa workflow.
+        val gitSha = try {
+            val proc = Runtime.getRuntime().exec(arrayOf("git", "rev-parse", "--short", "HEAD"))
+            proc.inputStream.bufferedReader().readText().trim().ifEmpty { "unknown" }
+        } catch (e: Exception) {
+            "unknown"
+        }
+        buildConfigField("String", "GIT_SHA", "\"$gitSha\"")
     }
 
     // Fixed debug keystore so every CI build signs with the same key:
@@ -62,6 +71,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
