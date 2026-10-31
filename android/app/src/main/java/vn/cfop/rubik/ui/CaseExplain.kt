@@ -46,6 +46,58 @@ fun describeF2LPosition(state: IntArray, pairIndex: Int): String {
     }
 }
 
+/**
+ * Giải thích F2L theo 4 bước trực quan (thay vì 41 trường hợp):
+ * 1. Đưa khe về FR (nếu cần xoay y)
+ * 2. Hất viên kẹt lên tầng trên (nếu cần)
+ * 3. Xoay U về 1 trong 3 trường hợp chuẩn (nhìn mặt trắng của góc)
+ * 4. Áp dụng công thức chuẩn (R U R' hoặc F' U F)
+ */
+fun describeF2LSteps(state: IntArray, pairIndex: Int, moves: List<String>): String {
+    if (moves.isEmpty()) {
+        return "Cặp này đã đúng chỗ rồi, không cần làm gì."
+    }
+    val pos = describeF2LPosition(state, pairIndex)
+    
+    // Xác định khe: pairIndex 0=FR (xanh lá-cam), 1,2,3 là các khe khác
+    val slotNames = listOf("trước-phải (xanh lá - cam)", "sau-phải", "sau-trái", "trước-trái")
+    val slotName = if (pairIndex in slotNames.indices) slotNames[pairIndex] else "cần giải"
+    
+    val steps = StringBuilder()
+    steps.append("Làm theo 4 bước:\n")
+    
+    // Bước 1: Đưa khe về FR
+    if (pairIndex == 0) {
+        steps.append("1. Khe đang ở trước-phải rồi, không cần xoay khối.\n")
+    } else {
+        steps.append("1. Xoay cả khối (y) để đưa khe $slotName về trước-phải.\n")
+    }
+    
+    // Bước 2: Hất viên kẹt lên
+    steps.append("2. $pos")
+    if (pos.contains("tầng dưới")) {
+        steps.append(" Dùng R U R' (hoặc F' U F) để hất viên kẹt lên tầng trên.")
+    }
+    steps.append("\n")
+    
+    // Bước 3 & 4: Trường hợp chuẩn
+    // Phân tích nước đi để đoán trường hợp (đơn giản: nhìn công thức chính)
+    val coreMoves = moves.filter { it != "U" && it != "U'" && it != "U2" && it != "y" && it != "y'" }
+    val mainAlg = when {
+        coreMoves.take(3) == listOf("R", "U", "R'") || coreMoves.take(3) == listOf("R", "U'", "R'") -> "R U R'"
+        coreMoves.take(3) == listOf("F'", "U", "F") || coreMoves.take(3) == listOf("F'", "U'", "F") -> "F' U F"
+        else -> null
+    }
+    if (mainAlg != null) {
+        steps.append("3. Xoay U/U' để đưa về trường hợp chuẩn (nhìn mặt trắng của góc).\n")
+        steps.append("4. Làm công thức chuẩn: $mainAlg.")
+    } else {
+        steps.append("3-4. Làm theo các nước dưới đây — app sẽ tách cặp ra rồi ghép lại theo 4 bước.")
+    }
+    
+    return steps.toString()
+}
+
 // ---- OLL EO: pattern from the state at the stage start ----
 /** "Đường thẳng" | "Chữ L" | "Chấm" | null (already solved / unknown). */
 fun ollEoPatternName(state: IntArray): String? {

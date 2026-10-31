@@ -44,7 +44,7 @@ import vn.cfop.rubik.solver.Cube
 
 private val STAGE_TIPS = mapOf(
     "cross" to "Đưa 4 cạnh trắng xuống mặt dưới, khớp màu với tâm các mặt bên.",
-    "f2l" to "Ghép từng cặp góc + cạnh rồi đưa vào đúng vị trí, không phá chữ thập.",
+    "f2l" to "4 bước: đưa khe về trước-phải → hất viên kẹt lên tầng trên → xoay U về trường hợp chuẩn → làm R U R' hoặc F' U F.",
     "oll_eo" to "Lật các cạnh tầng trên để mặt trên thành một màu.",
     "oll_co" to "Xoay các góc tầng trên để mặt trên thành một màu.",
     "pll_c" to "Đổi chỗ các góc tầng trên về đúng vị trí.",
@@ -107,17 +107,7 @@ fun SolveScreen(
             when (st.key) {
                 "cross" -> STAGE_TIPS["cross"] ?: ""
                 "f2l" -> {
-                    if (st.moves.isEmpty()) {
-                        "Cặp này đã đúng chỗ rồi, không cần làm gì."
-                    } else {
-                        val pos = describeF2LPosition(startState, st.pairIndex)
-                        val matched = f2lCaseFor(startState, st.pairIndex)
-                        if (matched != null) {
-                            "Đây là trường hợp ${matched.name} trong phần Luyện tập → F2L. $pos"
-                        } else {
-                            "Trường hợp này chưa có trong 41 bài luyện. $pos Cứ làm theo các nước dưới đây — app sẽ tách cặp ra rồi ghép lại."
-                        }
-                    }
+                    describeF2LSteps(startState, st.pairIndex, st.moves)
                 }
                 "oll_eo" -> {
                     if (isJustUTurns(st.moves)) {

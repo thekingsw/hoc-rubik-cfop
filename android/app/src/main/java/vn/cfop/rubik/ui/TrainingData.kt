@@ -54,49 +54,56 @@ fun TrainingCase.highlightFacelets(): Set<Int> {
 }
 
 // ------------------------------------------------------------ F2L
-// Basic: the first 3 (3-move triggers). Advanced: all 41, easiest first.
+// Phương pháp trực quan 4 bước (theo cách anh hiểu):
+// 1. Xoay cả khối (y) đưa khe chưa giải về trước-phải (FR)
+// 2. Đưa 2 viên (góc + cạnh) lên tầng trên (nếu kẹt ở dưới thì dùng trigger để hất lên)
+// 3. Xoay U/U' để đưa về 1 trong 3 trường hợp chuẩn
+// 4. Áp dụng công thức chuẩn của trường hợp đó
+//
+// Chỉ có 3 trường hợp chuẩn (với cặp xanh lá - cam ở tầng trên, khe FR):
+// - Trắng trên: góc có mặt trắng hướng lên trên
+// - Trắng phải: góc có mặt trắng hướng sang phải
+// - Trắng trước: góc có mặt trắng hướng ra trước
 val F2L_CASES: List<TrainingCase> = listOf(
-    TrainingCase("f2l-01", "f2l", "basic", "F2L 1", "Nhìn 2 viên xanh lá - cam trên khối 3D: vị trí của góc và cạnh quyết định công thức.", listOf("F'", "U'", "F"), listOf("F'", "U", "F"), "Tìm 2 viên xanh lá - cam, xem chúng đang ở đâu rồi làm công thức."),
-    TrainingCase("f2l-02", "f2l", "basic", "F2L 2", "Nhìn 2 viên xanh lá - cam trên khối 3D: vị trí của góc và cạnh quyết định công thức.", listOf("F'", "U", "F"), listOf("F'", "U'", "F"), "Tìm 2 viên xanh lá - cam, xem chúng đang ở đâu rồi làm công thức."),
-    TrainingCase("f2l-03", "f2l", "basic", "F2L 3", "Nhìn 2 viên xanh lá - cam trên khối 3D: vị trí của góc và cạnh quyết định công thức.", listOf("R", "U'", "R'"), listOf("R", "U", "R'"), "Tìm 2 viên xanh lá - cam, xem chúng đang ở đâu rồi làm công thức."),
-    TrainingCase("f2l-04", "f2l", "advanced", "F2L 4", "Nhìn 2 viên xanh lá - cam trên khối 3D: vị trí của góc và cạnh quyết định công thức.", listOf("R", "U", "R'"), listOf("R", "U'", "R'"), "Tìm 2 viên xanh lá - cam, xem chúng đang ở đâu rồi làm công thức."),
-    TrainingCase("f2l-05", "f2l", "advanced", "F2L 5", "Nhìn 2 viên xanh lá - cam trên khối 3D: vị trí của góc và cạnh quyết định công thức.", listOf("R", "U2", "R2", "F", "R", "F'"), listOf("F", "R'", "F'", "R2", "U2", "R'"), "Tìm 2 viên xanh lá - cam, xem chúng đang ở đâu rồi làm công thức."),
-    TrainingCase("f2l-06", "f2l", "advanced", "F2L 6", "Nhìn 2 viên xanh lá - cam trên khối 3D: vị trí của góc và cạnh quyết định công thức.", listOf("R", "U'", "R'", "F'", "U'", "F"), listOf("F'", "U", "F", "R", "U", "R'"), "Tìm 2 viên xanh lá - cam, xem chúng đang ở đâu rồi làm công thức."),
-    TrainingCase("f2l-07", "f2l", "advanced", "F2L 7", "Nhìn 2 viên xanh lá - cam trên khối 3D: vị trí của góc và cạnh quyết định công thức.", listOf("F'", "U'", "F", "R", "U", "R'"), listOf("R", "U'", "R'", "F'", "U", "F"), "Tìm 2 viên xanh lá - cam, xem chúng đang ở đâu rồi làm công thức."),
-    TrainingCase("f2l-08", "f2l", "advanced", "F2L 8", "Nhìn 2 viên xanh lá - cam trên khối 3D: vị trí của góc và cạnh quyết định công thức.", listOf("F'", "U", "F", "R", "U", "R'"), listOf("R", "U'", "R'", "F'", "U'", "F"), "Tìm 2 viên xanh lá - cam, xem chúng đang ở đâu rồi làm công thức."),
-    TrainingCase("f2l-09", "f2l", "advanced", "F2L 9", "Nhìn 2 viên xanh lá - cam trên khối 3D: vị trí của góc và cạnh quyết định công thức.", listOf("F'", "U2", "F", "R", "U", "R'"), listOf("R", "U'", "R'", "F'", "U2", "F"), "Tìm 2 viên xanh lá - cam, xem chúng đang ở đâu rồi làm công thức."),
-    TrainingCase("f2l-10", "f2l", "advanced", "F2L 10", "Nhìn 2 viên xanh lá - cam trên khối 3D: vị trí của góc và cạnh quyết định công thức.", listOf("F'", "U2", "F", "R", "U2", "R'"), listOf("R", "U2", "R'", "F'", "U2", "F"), "Tìm 2 viên xanh lá - cam, xem chúng đang ở đâu rồi làm công thức."),
-    TrainingCase("f2l-11", "f2l", "advanced", "F2L 11", "Nhìn 2 viên xanh lá - cam trên khối 3D: vị trí của góc và cạnh quyết định công thức.", listOf("F'", "U'", "F2", "R'", "F'", "R"), listOf("R'", "F", "R", "F2", "U", "F"), "Tìm 2 viên xanh lá - cam, xem chúng đang ở đâu rồi làm công thức."),
-    TrainingCase("f2l-12", "f2l", "advanced", "F2L 12", "Nhìn 2 viên xanh lá - cam trên khối 3D: vị trí của góc và cạnh quyết định công thức.", listOf("F'", "U", "F2", "R'", "F'", "R"), listOf("R'", "F", "R", "F2", "U'", "F"), "Tìm 2 viên xanh lá - cam, xem chúng đang ở đâu rồi làm công thức."),
-    TrainingCase("f2l-13", "f2l", "advanced", "F2L 13", "Nhìn 2 viên xanh lá - cam trên khối 3D: vị trí của góc và cạnh quyết định công thức.", listOf("F'", "U2", "F2", "R'", "F'", "R"), listOf("R'", "F", "R", "F2", "U2", "F"), "Tìm 2 viên xanh lá - cam, xem chúng đang ở đâu rồi làm công thức."),
-    TrainingCase("f2l-14", "f2l", "advanced", "F2L 14", "Nhìn 2 viên xanh lá - cam trên khối 3D: vị trí của góc và cạnh quyết định công thức.", listOf("F", "U2", "F2", "U'", "F2", "U'", "F'"), listOf("F", "U", "F2", "U", "F2", "U2", "F'"), "Tìm 2 viên xanh lá - cam, xem chúng đang ở đâu rồi làm công thức."),
-    TrainingCase("f2l-15", "f2l", "advanced", "F2L 15", "Nhìn 2 viên xanh lá - cam trên khối 3D: vị trí của góc và cạnh quyết định công thức.", listOf("F'", "U'", "F", "U'", "F'", "U'", "F"), listOf("F'", "U", "F", "U", "F'", "U", "F"), "Tìm 2 viên xanh lá - cam, xem chúng đang ở đâu rồi làm công thức."),
-    TrainingCase("f2l-16", "f2l", "advanced", "F2L 16", "Nhìn 2 viên xanh lá - cam trên khối 3D: vị trí của góc và cạnh quyết định công thức.", listOf("F'", "U", "F", "U'", "F'", "U'", "F"), listOf("F'", "U", "F", "U", "F'", "U'", "F"), "Tìm 2 viên xanh lá - cam, xem chúng đang ở đâu rồi làm công thức."),
-    TrainingCase("f2l-17", "f2l", "advanced", "F2L 17", "Nhìn 2 viên xanh lá - cam trên khối 3D: vị trí của góc và cạnh quyết định công thức.", listOf("F'", "U2", "F", "U", "F'", "U'", "F"), listOf("F'", "U", "F", "U'", "F'", "U2", "F"), "Tìm 2 viên xanh lá - cam, xem chúng đang ở đâu rồi làm công thức."),
-    TrainingCase("f2l-18", "f2l", "advanced", "F2L 18", "Nhìn 2 viên xanh lá - cam trên khối 3D: vị trí của góc và cạnh quyết định công thức.", listOf("R", "U'", "R'", "U2", "F'", "U'", "F"), listOf("F'", "U", "F", "U2", "R", "U", "R'"), "Tìm 2 viên xanh lá - cam, xem chúng đang ở đâu rồi làm công thức."),
-    TrainingCase("f2l-19", "f2l", "advanced", "F2L 19", "Nhìn 2 viên xanh lá - cam trên khối 3D: vị trí của góc và cạnh quyết định công thức.", listOf("F'", "U'", "F", "U2", "F'", "U", "F"), listOf("F'", "U'", "F", "U2", "F'", "U", "F"), "Tìm 2 viên xanh lá - cam, xem chúng đang ở đâu rồi làm công thức."),
-    TrainingCase("f2l-20", "f2l", "advanced", "F2L 20", "Nhìn 2 viên xanh lá - cam trên khối 3D: vị trí của góc và cạnh quyết định công thức.", listOf("F2", "U2", "F", "U", "F'", "U", "F2"), listOf("F2", "U'", "F", "U'", "F'", "U2", "F2"), "Tìm 2 viên xanh lá - cam, xem chúng đang ở đâu rồi làm công thức."),
-    TrainingCase("f2l-21", "f2l", "advanced", "F2L 21", "Nhìn 2 viên xanh lá - cam trên khối 3D: vị trí của góc và cạnh quyết định công thức.", listOf("F'", "U'", "F", "U", "R", "U'", "R'"), listOf("R", "U", "R'", "U'", "F'", "U", "F"), "Tìm 2 viên xanh lá - cam, xem chúng đang ở đâu rồi làm công thức."),
-    TrainingCase("f2l-22", "f2l", "advanced", "F2L 22", "Nhìn 2 viên xanh lá - cam trên khối 3D: vị trí của góc và cạnh quyết định công thức.", listOf("F'", "U", "F", "U", "R", "U'", "R'"), listOf("R", "U", "R'", "U'", "F'", "U'", "F"), "Tìm 2 viên xanh lá - cam, xem chúng đang ở đâu rồi làm công thức."),
-    TrainingCase("f2l-23", "f2l", "advanced", "F2L 23", "Nhìn 2 viên xanh lá - cam trên khối 3D: vị trí của góc và cạnh quyết định công thức.", listOf("R", "U'", "R'", "U2", "R", "U'", "R'"), listOf("R", "U", "R'", "U2", "R", "U", "R'"), "Tìm 2 viên xanh lá - cam, xem chúng đang ở đâu rồi làm công thức."),
-    TrainingCase("f2l-24", "f2l", "advanced", "F2L 24", "Nhìn 2 viên xanh lá - cam trên khối 3D: vị trí của góc và cạnh quyết định công thức.", listOf("R", "U", "R'", "U2", "R", "U'", "R'"), listOf("R", "U", "R'", "U2", "R", "U'", "R'"), "Tìm 2 viên xanh lá - cam, xem chúng đang ở đâu rồi làm công thức."),
-    TrainingCase("f2l-25", "f2l", "advanced", "F2L 25", "Nhìn 2 viên xanh lá - cam trên khối 3D: vị trí của góc và cạnh quyết định công thức.", listOf("R", "U2", "R'", "U2", "R", "U'", "R'"), listOf("R", "U", "R'", "U2", "R", "U2", "R'"), "Tìm 2 viên xanh lá - cam, xem chúng đang ở đâu rồi làm công thức."),
-    TrainingCase("f2l-26", "f2l", "advanced", "F2L 26", "Nhìn 2 viên xanh lá - cam trên khối 3D: vị trí của góc và cạnh quyết định công thức.", listOf("F'", "U2", "F", "U'", "R", "U", "R'"), listOf("R", "U'", "R'", "U", "F'", "U2", "F"), "Tìm 2 viên xanh lá - cam, xem chúng đang ở đâu rồi làm công thức."),
-    TrainingCase("f2l-27", "f2l", "advanced", "F2L 27", "Nhìn 2 viên xanh lá - cam trên khối 3D: vị trí của góc và cạnh quyết định công thức.", listOf("R", "U'", "R'", "U'", "R", "U", "R'"), listOf("R", "U'", "R'", "U", "R", "U", "R'"), "Tìm 2 viên xanh lá - cam, xem chúng đang ở đâu rồi làm công thức."),
-    TrainingCase("f2l-28", "f2l", "advanced", "F2L 28", "Nhìn 2 viên xanh lá - cam trên khối 3D: vị trí của góc và cạnh quyết định công thức.", listOf("R", "U2", "R'", "U'", "R", "U", "R'"), listOf("R", "U'", "R'", "U", "R", "U2", "R'"), "Tìm 2 viên xanh lá - cam, xem chúng đang ở đâu rồi làm công thức."),
-    TrainingCase("f2l-29", "f2l", "advanced", "F2L 29", "Nhìn 2 viên xanh lá - cam trên khối 3D: vị trí của góc và cạnh quyết định công thức.", listOf("R", "U'", "R'", "U", "R", "U", "R'"), listOf("R", "U'", "R'", "U'", "R", "U", "R'"), "Tìm 2 viên xanh lá - cam, xem chúng đang ở đâu rồi làm công thức."),
-    TrainingCase("f2l-30", "f2l", "advanced", "F2L 30", "Nhìn 2 viên xanh lá - cam trên khối 3D: vị trí của góc và cạnh quyết định công thức.", listOf("R", "U2", "R'", "U", "R", "U", "R'"), listOf("R", "U'", "R'", "U'", "R", "U2", "R'"), "Tìm 2 viên xanh lá - cam, xem chúng đang ở đâu rồi làm công thức."),
-    TrainingCase("f2l-31", "f2l", "advanced", "F2L 31", "Nhìn 2 viên xanh lá - cam trên khối 3D: vị trí của góc và cạnh quyết định công thức.", listOf("F'", "U", "F", "U2", "R", "U", "R'"), listOf("R", "U'", "R'", "U2", "F'", "U'", "F"), "Tìm 2 viên xanh lá - cam, xem chúng đang ở đâu rồi làm công thức."),
-    TrainingCase("f2l-32", "f2l", "advanced", "F2L 32", "Nhìn 2 viên xanh lá - cam trên khối 3D: vị trí của góc và cạnh quyết định công thức.", listOf("R", "U'", "R'", "F", "R'", "F'", "R"), listOf("R'", "F", "R", "F'", "R", "U", "R'"), "Tìm 2 viên xanh lá - cam, xem chúng đang ở đâu rồi làm công thức."),
-    TrainingCase("f2l-33", "f2l", "advanced", "F2L 33", "Nhìn 2 viên xanh lá - cam trên khối 3D: vị trí của góc và cạnh quyết định công thức.", listOf("R", "U", "R'", "F", "R'", "F'", "R"), listOf("R'", "F", "R", "F'", "R", "U'", "R'"), "Tìm 2 viên xanh lá - cam, xem chúng đang ở đâu rồi làm công thức."),
-    TrainingCase("f2l-34", "f2l", "advanced", "F2L 34", "Nhìn 2 viên xanh lá - cam trên khối 3D: vị trí của góc và cạnh quyết định công thức.", listOf("R2", "U2", "R'", "U'", "R", "U'", "R2"), listOf("R2", "U", "R'", "U", "R", "U2", "R2"), "Tìm 2 viên xanh lá - cam, xem chúng đang ở đâu rồi làm công thức."),
-    TrainingCase("f2l-35", "f2l", "advanced", "F2L 35", "Nhìn 2 viên xanh lá - cam trên khối 3D: vị trí của góc và cạnh quyết định công thức.", listOf("R2", "U2", "R2", "U'", "R2", "U'", "R2"), listOf("R2", "U", "R2", "U", "R2", "U2", "R2"), "Tìm 2 viên xanh lá - cam, xem chúng đang ở đâu rồi làm công thức."),
-    TrainingCase("f2l-36", "f2l", "advanced", "F2L 36", "Nhìn 2 viên xanh lá - cam trên khối 3D: vị trí của góc và cạnh quyết định công thức.", listOf("R2", "U2", "F", "R2", "F'", "U2", "R2"), listOf("R2", "U2", "F", "R2", "F'", "U2", "R2"), "Tìm 2 viên xanh lá - cam, xem chúng đang ở đâu rồi làm công thức."),
-    TrainingCase("f2l-37", "f2l", "advanced", "F2L 37", "Nhìn 2 viên xanh lá - cam trên khối 3D: vị trí của góc và cạnh quyết định công thức.", listOf("R", "U", "F", "R", "U", "R'", "U'", "F'", "R'"), listOf("R", "F", "U", "R", "U'", "R'", "F'", "U'", "R'"), "Tìm 2 viên xanh lá - cam, xem chúng đang ở đâu rồi làm công thức."),
-    TrainingCase("f2l-38", "f2l", "advanced", "F2L 38", "Nhìn 2 viên xanh lá - cam trên khối 3D: vị trí của góc và cạnh quyết định công thức.", listOf("R", "F", "U", "R", "U'", "R'", "F'", "U'", "R'"), listOf("R", "U", "F", "R", "U", "R'", "U'", "F'", "R'"), "Tìm 2 viên xanh lá - cam, xem chúng đang ở đâu rồi làm công thức."),
-    TrainingCase("f2l-39", "f2l", "advanced", "F2L 39", "Nhìn 2 viên xanh lá - cam trên khối 3D: vị trí của góc và cạnh quyết định công thức.", listOf("R2", "U2", "F", "R2", "F'", "U2", "R'", "U", "R'"), listOf("R", "U'", "R", "U2", "F", "R2", "F'", "U2", "R2"), "Tìm 2 viên xanh lá - cam, xem chúng đang ở đâu rồi làm công thức."),
-    TrainingCase("f2l-40", "f2l", "advanced", "F2L 40", "Nhìn 2 viên xanh lá - cam trên khối 3D: vị trí của góc và cạnh quyết định công thức.", listOf("R2", "U2", "R'", "U'", "R", "U'", "R'", "U2", "R'"), listOf("R", "U2", "R", "U", "R'", "U", "R", "U2", "R2"), "Tìm 2 viên xanh lá - cam, xem chúng đang ở đâu rồi làm công thức."),
-    TrainingCase("f2l-41", "f2l", "advanced", "F2L 41", "Nhìn 2 viên xanh lá - cam trên khối 3D: vị trí của góc và cạnh quyết định công thức.", listOf("R2", "U2", "F", "R'", "F'", "U2", "R'", "U2", "R'"), listOf("R", "U2", "R", "U2", "F", "R", "F'", "U2", "R2"), "Tìm 2 viên xanh lá - cam, xem chúng đang ở đâu rồi làm công thức."),
+    // --- 3 trường hợp chuẩn ---
+    TrainingCase(
+        "f2l-std-1", "f2l", "basic", "Chuẩn 1: Trắng trên",
+        "Góc có mặt TRẮNG hướng LÊN TRÊN (nhìn thấy màu trắng trên mặt vàng). Cạnh nằm ở tầng trên.",
+        listOf("R", "U", "R'"), listOf("R", "U'", "R'"),
+        "Thấy trắng trên mặt vàng → đưa góc về trên khe FR (xoay U), rồi R U R'."
+    ),
+    TrainingCase(
+        "f2l-std-2", "f2l", "basic", "Chuẩn 2: Trắng phải",
+        "Góc có mặt TRẮNG hướng sang PHẢI (nhìn thấy màu trắng ở mặt bên phải). Cạnh nằm ở tầng trên.",
+        listOf("R", "U", "R'"), listOf("R", "U'", "R'"),
+        "Thấy trắng ở mặt phải → xoay U để cạnh về đúng vị trí, rồi R U R'."
+    ),
+    TrainingCase(
+        "f2l-std-3", "f2l", "basic", "Chuẩn 3: Trắng trước",
+        "Góc có mặt TRẮNG hướng ra TRƯỚC (nhìn thấy màu trắng ở mặt trước). Cạnh nằm ở tầng trên.",
+        listOf("F'", "U", "F"), listOf("F'", "U'", "F"),
+        "Thấy trắng ở mặt trước → xoay U để cạnh về đúng vị trí, rồi F' U F."
+    ),
+    // --- Hất viên kẹt lên (extraction) ---
+    TrainingCase(
+        "f2l-ext-1", "f2l", "basic", "Hất góc kẹt lên",
+        "Góc đang KẸT ở tầng dưới (trong khe FR nhưng sai hướng). Dùng chính trigger của khe để hất nó lên tầng trên.",
+        listOf("R", "U", "R'"), listOf("R", "U'", "R'"),
+        "Góc kẹt ở khe FR → R U R' hất lên tầng trên, rồi xử lý như 3 trường hợp chuẩn."
+    ),
+    TrainingCase(
+        "f2l-ext-2", "f2l", "basic", "Hất cạnh kẹt lên",
+        "Cạnh đang KẸT ở tầng dưới. Đưa nó lên tầng trên trước rồi mới ghép cặp.",
+        listOf("F'", "U", "F"), listOf("F'", "U'", "F"),
+        "Cạnh kẹt → F' U F đưa lên, rồi tìm góc để ghép."
+    ),
+    // --- Xoay khối đưa khe về FR ---
+    TrainingCase(
+        "f2l-rot-1", "f2l", "basic", "Xoay khối về FR",
+        "Khe cần giải đang ở vị trí khác (không phải trước-phải). Xoay cả khối (y) để đưa nó về góc trước-phải rồi làm như bình thường.",
+        listOf("R", "U", "R'"), listOf("R", "U'", "R'"),
+        "Luôn đưa khe về trước-phải trước khi làm. Xoay y (cả khối sang phải) hoặc y' (sang trái)."
+    ),
 )
 
 // ------------------------------------------------------------ OLL (2-look)
@@ -130,16 +137,33 @@ F2L là gì? Sau khi làm xong chữ thập trắng ở mặt dưới, bạn c�
 (1 góc + 1 cạnh) vào 4 khe ở 2 tầng dưới. Mỗi cặp gồm 1 viên góc có màu trắng
 và 1 viên cạnh — ví dụ cặp xanh lá - cam.
 
-Ý tưởng chỉ có 1: tìm 2 viên của 1 cặp, ghép chúng lại với nhau ở tầng trên,
-rồi đưa cả cặp vào đúng khe. Không cần học thuộc lòng — chỉ cần hiểu 3 tình huống:
+CHỈ CẦN NHỚ 4 BƯỚC (không cần học 41 công thức):
 
-1. Cặp đã ghép sẵn ở tầng trên: chỉ việc đưa vào khe (3 nước).
-2. Cặp tách rời ở tầng trên: ghép chúng lại rồi đưa vào.
-3. Cặp đang ở sai khe: lấy nó ra tầng trên trước (dùng công thức đưa vào),
-rồi xử lý như tình huống 1 hoặc 2.
+BƯỚC 1 — Xoay cả khối đưa khe về trước-phải:
+Luôn làm việc ở khe TRƯỚC-PHẢI (FR). Nếu khe cần giải đang ở chỗ khác,
+xoay cả khối (y: sang phải, y': sang trái) để đưa nó về FR.
 
-Mẹo: luôn làm cặp nào dễ thấy nhất trước. Xoay mặt trên (U) để đưa viên góc
-hoặc viên cạnh tới gần nhau, rồi ghép.
+BƯỚC 2 — Đưa 2 viên lên tầng trên:
+Tìm 2 viên của cặp (góc có trắng + cạnh). Nếu chúng đang ở tầng trên rồi thì tốt.
+Nếu 1 viên đang KẸT ở tầng dưới (trong khe), dùng trigger của khe đó để hất lên:
+- Kẹt ở khe FR: làm R U R' (hất góc lên) hoặc F' U F (hất cạnh lên)
+- Kẹt ở khe khác: xoay y đưa khe đó về FR trước, rồi hất lên
+Chữ thập trắng KHÔNG bị phá khi hất.
+
+BƯỚC 3 — Xoay U/U' về trường hợp chuẩn:
+Khi cả 2 viên đã ở tầng trên, chỉ có 3 trường hợp. Nhìn mặt TRẮNG của viên góc:
+- Trắng hướng LÊN TRÊN (thấy trắng trên mặt vàng) → Trường hợp 1
+- Trắng hướng sang PHẢI (thấy trắng ở mặt phải) → Trường hợp 2  
+- Trắng hướng ra TRƯỚC (thấy trắng ở mặt trước) → Trường hợp 3
+Xoay U hoặc U' để đưa góc về vị trí trên khe FR.
+
+BƯỚC 4 — Áp dụng công thức chuẩn:
+- Trường hợp 1 & 2 (trắng trên/phải): R U R'
+- Trường hợp 3 (trắng trước): F' U F
+
+Vậy là xong 1 cặp! Lặp lại 4 bước cho 3 cặp còn lại.
+
+Mẹo: Đừng cố nhớ vị trí từng viên. Chỉ cần nhớ: FR → hất lên → nhìn trắng → U → công thức.
 """
 
 val THEORY_OLL = """
