@@ -55,55 +55,39 @@ fun TrainingCase.highlightFacelets(): Set<Int> {
 }
 
 // ------------------------------------------------------------ F2L
-// Phương pháp trực quan 4 bước (theo cách anh hiểu):
-// 1. Xoay cả khối (y) đưa khe chưa giải về trước-phải (FR)
-// 2. Đưa 2 viên (góc + cạnh) lên tầng trên (nếu kẹt ở dưới thì dùng trigger để hất lên)
-// 3. Xoay U/U' để đưa về 1 trong 3 trường hợp chuẩn
-// 4. Áp dụng công thức chuẩn của trường hợp đó
+// Phương pháp trực quan (theo cách anh hiểu):
+// 1. Đưa 2 viên (góc + cạnh) lên tầng trên (nếu kẹt ở dưới thì dùng trigger để hất lên)
+// 2. Xoay U/U' để đưa về trường hợp cơ bản
+// 3. Áp dụng công thức cơ bản R U R'
 //
-// Chỉ có 3 trường hợp chuẩn (với cặp xanh lá - cam ở tầng trên, khe FR):
-// - Trắng trên: góc có mặt trắng hướng lên trên
-// - Trắng phải: góc có mặt trắng hướng sang phải
-// - Trắng trước: góc có mặt trắng hướng ra trước
+// (Khung hình cố định: xanh lá ở trước, cam ở phải. Phần luyện tập không xoay cả khối.)
 val F2L_CASES: List<TrainingCase> = listOf(
-    // --- 3 trường hợp chuẩn ---
+    // --- Trường hợp cơ bản: trắng ở mặt phải ---
     TrainingCase(
-        "f2l-std-1", "f2l", "basic", "Chuẩn 1: Trắng trên",
-        "Góc có mặt TRẮNG hướng LÊN TRÊN (nhìn thấy màu trắng trên mặt vàng). Cạnh nằm ở tầng trên.",
+        "f2l-std-1", "f2l", "basic", "Cơ bản: Trắng ở mặt phải",
+        "Góc có mặt TRẮNG hướng sang PHẢI (nhìn từ bên phải thấy màu trắng ở viên góc). Cạnh xanh lá - cam nằm ở tầng trên.",
         listOf("R", "U", "R'"), listOf("R", "U'", "R'"),
-        "Thấy trắng trên mặt vàng → đưa góc về trên khe FR (xoay U), rồi R U R'."
+        "Thấy trắng ở mặt phải → R U R' đưa cặp vào khe. Đây là công thức duy nhất cần thuộc cho F2L cơ bản."
     ),
+    // --- Dùng U/U' để đưa về trường hợp cơ bản ---
     TrainingCase(
-        "f2l-std-2", "f2l", "basic", "Chuẩn 2: Trắng phải",
-        "Góc có mặt TRẮNG hướng sang PHẢI (nhìn từ bên phải thấy màu trắng ở viên góc).",
-        listOf("F'", "U", "F"), listOf("F'", "U'", "F"),
-        "Thấy trắng ở mặt phải → F' U F để đưa cặp vào khe."
-    ),
-    TrainingCase(
-        "f2l-std-3", "f2l", "basic", "Chuẩn 3: Trắng trước",
-        "Góc có mặt TRẮNG hướng ra TRƯỚC (nhìn từ phía trước thấy màu trắng ở viên góc).",
-        listOf("F", "U'", "F'"), listOf("F", "U", "F'"),
-        "Thấy trắng ở mặt trước → F U' F' để đưa cặp vào khe."
+        "f2l-u-1", "f2l", "basic", "Dùng U đưa về cơ bản",
+        "Cặp đã ở tầng trên nhưng góc chưa nằm trên khe FR. Xoay U (hoặc U') để đưa góc về trên khe, rồi làm như bài Cơ bản.",
+        listOf("U'", "R", "U", "R'"), listOf("R", "U'", "R'", "U"),
+        "Thấy cặp ở tầng trên nhưng lệch vị trí → xoay U/U' cho góc về trên khe FR, rồi R U R'."
     ),
     // --- Hất viên kẹt lên (extraction) ---
     TrainingCase(
         "f2l-ext-1", "f2l", "basic", "Hất góc kẹt lên",
-        "Góc đang KẸT ở khe (đã ở vị trí nhưng sai hướng). Dùng R U R' U' để hất nó lên rồi làm lại.",
-        listOf("R", "U", "R'", "U'"), listOf("U", "R", "U'", "R'"),
-        "Góc kẹt → R U R' U' đưa lên tầng trên, rồi nhận diện 1 trong 3 trường hợp chuẩn."
+        "Góc đang KẸT ở khe (nằm trong khe nhưng sai hướng, trắng không xuống dưới). Dùng R U R' để hất nó lên tầng trên rồi làm lại từ đầu.",
+        listOf("R", "U", "R'"), listOf("R", "F"),
+        "Góc kẹt trong khe → R U R' hất lên tầng trên, rồi xoay U về trường hợp cơ bản."
     ),
     TrainingCase(
         "f2l-ext-2", "f2l", "basic", "Hất cạnh kẹt lên",
-        "Cạnh đang KẸT ở khe. Dùng F' U' F U để đưa nó lên tầng trên trước rồi mới ghép cặp.",
-        listOf("F'", "U'", "F", "U"), listOf("U'", "F'", "U", "F"),
-        "Cạnh kẹt → F' U' F U đưa lên, rồi tìm góc để ghép thành 1 trong 3 trường hợp chuẩn."
-    ),
-    // --- Xoay khối đưa khe về FR ---
-    TrainingCase(
-        "f2l-rot-1", "f2l", "basic", "Xoay khối về FR",
-        "Khe cần giải đang ở vị trí khác (không phải trước-phải). Xoay cả khối để đưa nó về góc trước-phải rồi làm như bình thường.",
-        listOf("R", "U", "R'"), listOf("R", "U'", "R'"),
-        "Luôn đưa khe về trước-phải trước khi làm: xoay cả khối trên tay (y / y' / y2), rồi bấm nút xoay tương ứng trong app — công thức sẽ tự đổi ký hiệu theo hướng cầm mới của anh."
+        "Cạnh đang KẸT ở khe (nằm trong khe nhưng bị lật). Dùng F' U F để hất nó lên tầng trên trước rồi mới ghép cặp.",
+        listOf("F'", "U", "F"), listOf("R", "U", "F"),
+        "Cạnh kẹt trong khe → F' U F hất lên, rồi tìm góc để ghép cặp."
     ),
 )
 
@@ -143,39 +127,55 @@ val ALL_TRAINING_CASES: List<TrainingCase> = (F2L_CASES + OLL_CASES + PLL_CASES)
 // ------------------------------------------------------------ Theory
 val THEORY_F2L = """
 F2L là gì? Sau khi làm xong chữ thập trắng ở mặt dưới, bạn cần đưa 4 cặp
-(1 góc + 1 cạnh) vào 4 khe ở 2 tầng dưới. Mỗi cặp gồm 1 viên góc có màu trắng
-và 1 viên cạnh — ví dụ cặp xanh lá - cam.
+(1 góc có màu trắng + 1 viên cạnh) vào 4 khe ở 2 tầng dưới.
+Ví dụ: cặp góc trắng/xanh lá/cam + cạnh xanh lá/cam → khe trước-phải.
 
-CHỈ CẦN NHỚ 4 BƯỚC (không cần học 41 công thức):
+KHUNG HÌNH CỐ ĐỊNH: xanh lá luôn ở trước mặt, cam luôn ở bên phải.
+Mọi công thức trong phần này đều theo khung đó — không xoay cả khối.
 
-BƯỚC 1 — Xoay cả khối đưa khe về trước-phải:
-Luôn làm việc ở khe TRƯỚC-PHẢI (FR). Nếu khe cần giải đang ở chỗ khác,
-xoay cả khối trên tay để đưa nó về FR, rồi bấm nút xoay tương ứng trong
-app (Trái/Phải/Sau ra trước) — mọi công thức sẽ tự đổi ký hiệu theo hướng
-cầm mới của anh. Ký hiệu luôn theo vị trí (R = bên phải, F = trước mặt),
-không theo màu cố định, nên anh cứ nhìn vị trí mà xoay.
+CHỈ CÓ 3 BƯỚC, LẶP LẠI CHO 4 CẶP:
 
-BƯỚC 2 — Đưa 2 viên lên tầng trên:
-Tìm 2 viên của cặp (góc có trắng + cạnh). Nếu chúng đang ở tầng trên rồi thì tốt.
-Nếu 1 viên đang KẸT ở tầng dưới (trong khe), dùng trigger của khe đó để hất lên:
-- Kẹt ở khe FR: làm R U R' (hất góc lên) hoặc F' U F (hất cạnh lên)
-- Kẹt ở khe khác: xoay y đưa khe đó về FR trước, rồi hất lên
-Chữ thập trắng KHÔNG bị phá khi hất.
+BƯỚC 1 — Đưa 2 viên lên tầng trên (tầng vàng):
+Tìm 2 viên của cặp. Có 3 khả năng:
 
-BƯỚC 3 — Xoay U/U' về trường hợp chuẩn:
-Khi cả 2 viên đã ở tầng trên, chỉ có 3 trường hợp. Nhìn mặt TRẮNG của viên góc:
-- Trắng hướng LÊN TRÊN (thấy trắng trên mặt vàng) → Trường hợp 1
-- Trắng hướng sang PHẢI (thấy trắng ở mặt phải) → Trường hợp 2  
-- Trắng hướng ra TRƯỚC (thấy trắng ở mặt trước) → Trường hợp 3
-Xoay U hoặc U' để đưa góc về vị trí trên khe FR.
+a) Cả 2 viên đã ở tầng trên → tốt, sang Bước 2 luôn.
 
-BƯỚC 4 — Áp dụng công thức chuẩn:
-- Trường hợp 1 & 2 (trắng trên/phải): R U R'
-- Trường hợp 3 (trắng trước): F' U F
+b) Góc đang KẸT ở khe dưới (nằm trong khe nhưng sai hướng):
+   Làm R U R' để hất nó lên tầng trên.
+   (R: mở khe ra, U: đẩy viên lên, R': đóng khe lại.
+   Chữ thập trắng KHÔNG bị phá.)
 
-Vậy là xong 1 cặp! Lặp lại 4 bước cho 3 cặp còn lại.
+c) Cạnh đang KẸT ở khe dưới:
+   Làm F' U F để hất nó lên tầng trên.
+   (Tương tự: mở khe bằng F', đẩy lên bằng U, đóng lại bằng F.)
 
-Mẹo: Đừng cố nhớ vị trí từng viên. Chỉ cần nhớ: FR → hất lên → nhìn trắng → U → công thức.
+Nếu cả góc và cạnh đều kẹt (hiếm), hất từng viên một.
+
+BƯỚC 2 — Xoay U/U' để đưa về trường hợp cơ bản:
+Khi cả 2 viên đã ở tầng trên, xoay mặt vàng (U hoặc U') để đưa
+viên GÓC về vị trí ngay trên khe trước-phải.
+Nhìn mặt TRẮNG của viên góc để nhận diện:
+- Trắng hướng sang PHẢI (nhìn bên phải thấy trắng) → đúng bài Cơ bản.
+- Trắng hướng LÊN TRÊN hoặc ra TRƯỚC → cứ xoay U/U' thử từng vị trí,
+  khi nào thấy trắng sang phải thì dừng. (Trong thực tế, sau khi hất
+  viên kẹt lên đúng cách, trắng thường đã ở mặt phải.)
+
+BƯỚC 3 — Áp dụng công thức cơ bản:
+Khi góc đã ở trên khe, trắng hướng sang phải, cạnh ở tầng trên:
+   R U R'
+(R: mở khe, U: thả cạnh vào, R': đóng khe — cặp tự rơi vào đúng chỗ.)
+Xong 1 cặp! Lặp lại 3 bước cho 3 cặp còn lại.
+
+VÌ SAO KHÔNG CẦN HỌC 41 CÔNG THỨC?
+Anh đoán đúng đấy. 41 công thức F2L bản chất chỉ là biến thể của nhau:
+- Mỗi công thức dài thực ra là "xoay U vài cái để đưa về trường hợp cơ bản,
+  rồi làm R U R'".
+- Nếu anh luôn đưa cặp về khe trước-phải và dùng U/U' để căn chỉnh,
+  mọi trường hợp đều quay về 1-2 hình cơ bản.
+- Học thuộc cách làm (hất lên → xoay U → R U R') thì 41 cái kia
+  tự nhiên sẽ thuộc theo, không cần học vẹt từng cái.
+
+Mẹo: Đừng cố nhớ vị trí từng viên. Chỉ cần nhớ: hất lên → xoay U → R U R'.
 """
 
 val THEORY_OLL = """

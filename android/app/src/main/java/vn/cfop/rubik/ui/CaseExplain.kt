@@ -47,11 +47,10 @@ fun describeF2LPosition(state: IntArray, pairIndex: Int): String {
 }
 
 /**
- * Giải thích F2L theo 4 bước trực quan (thay vì 41 trường hợp):
- * 1. Đưa khe về FR (nếu cần xoay y)
- * 2. Hất viên kẹt lên tầng trên (nếu cần)
- * 3. Xoay U về 1 trong 3 trường hợp chuẩn (nhìn mặt trắng của góc)
- * 4. Áp dụng công thức chuẩn (R U R' hoặc F' U F)
+ * Giải thích F2L theo phương pháp trực quan (thay vì 41 trường hợp):
+ * 1. Hất viên kẹt lên tầng trên (nếu cần)
+ * 2. Xoay U/U' để đưa về trường hợp cơ bản
+ * 3. Áp dụng công thức cơ bản R U R'
  */
 fun describeF2LSteps(state: IntArray, pairIndex: Int, moves: List<String>): String {
     if (moves.isEmpty()) {
@@ -73,9 +72,9 @@ fun describeF2LSteps(state: IntArray, pairIndex: Int, moves: List<String>): Stri
     // v4: công thức đã loại bỏ xoay cả khối — ký hiệu luôn theo hướng
     // anh đang cầm (nút xoay trong app sẽ tự dịch khi anh xoay khối).
     val steps = StringBuilder()
-    steps.append("Làm theo 4 bước:\n")
+    steps.append("Làm theo 3 bước:\n")
 
-    // Bước 1: Đưa khe về FR
+    // Bước 1: Đưa khe về FR (giữ nguyên — màn Giải vẫn hỗ trợ xoay khối)
     steps.append("1. Đưa khe $slotName về trước-phải (xoay cả khối trên tay rồi bấm nút xoay trong app).\n")
     
     // Bước 2: Hất viên kẹt lên
@@ -85,9 +84,8 @@ fun describeF2LSteps(state: IntArray, pairIndex: Int, moves: List<String>): Stri
     }
     steps.append("\n")
     
-    // Bước 3 & 4: Trường hợp chuẩn
-    // Phân tích nước đi để đoán trường hợp (đơn giản: nhìn công thức chính,
-    // bỏ qua các nước xoay U ở đầu stage)
+    // Bước 3: Công thức cơ bản
+    // Phân tích nước đi để đoán công thức chính (bỏ qua các nước xoay U ở đầu stage)
     val coreMoves = moves.filter { it != "U" && it != "U'" && it != "U2" }
     val mainAlg = when {
         coreMoves.take(3) == listOf("R", "U", "R'") || coreMoves.take(3) == listOf("R", "U'", "R'") -> "R U R'"
@@ -95,10 +93,9 @@ fun describeF2LSteps(state: IntArray, pairIndex: Int, moves: List<String>): Stri
         else -> null
     }
     if (mainAlg != null) {
-        steps.append("3. Xoay U/U' để đưa về trường hợp chuẩn (nhìn mặt trắng của góc).\n")
-        steps.append("4. Làm công thức chuẩn: $mainAlg.")
+        steps.append("3. Xoay U/U' để đưa góc về trên khe (nhìn mặt trắng), rồi làm công thức: $mainAlg.")
     } else {
-        steps.append("3-4. Làm theo các nước dưới đây — app sẽ tách cặp ra rồi ghép lại theo 4 bước.")
+        steps.append("3. Làm theo các nước dưới đây — app sẽ tách cặp ra rồi ghép lại.")
     }
     
     return steps.toString()
