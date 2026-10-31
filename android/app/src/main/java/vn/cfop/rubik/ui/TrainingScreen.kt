@@ -29,6 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,8 +40,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import vn.cfop.rubik.solver.CfopSolver
 import vn.cfop.rubik.solver.Cube
+import vn.cfop.rubik.solver.CubeOrientation
 
 private fun invertMove(m: String): String = when {
     m.endsWith("'") -> m.dropLast(1)
@@ -235,10 +238,16 @@ private fun CaseDetail(
     var autoPlay by remember { mutableStateOf(false) }
     val total = case.algorithm.size
 
+    // v4: như màn hình giải — xoay khối trên tay thì ký hiệu tự đổi theo.
+    var viewRot by remember(case) { mutableStateOf(CubeOrientation.identity()) }
+    var rotating by remember(case) { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    fun dispMove(m: String): String = CubeOrientation.translateForView(m, viewRot)
+
     fun stateAt(k: Int): IntArray {
         val cube = Cube(pattern)
         for (i in 0 until k) cube.apply(case.algorithm[i])
-        return cube.s
+        return CubeOrientation.applyView(cube.s, viewRot)
     }
 
     var baseState by remember(case) { mutableStateOf(pattern.copyOf()) }
@@ -246,12 +255,28 @@ private fun CaseDetail(
     val animProgress = remember(case) { Animatable(0f) }
     var lastStep by remember(case) { mutableIntStateOf(0) }
 
+    fun onRotate(rot: String) {
+        if (rotating) return
+        scope.launch {
+            rotating = true
+            autoPlay = false
+            baseState = stateAt(step)
+            animMove = rot
+            animProgress.snapTo(0f)
+            animProgress.animateTo(1f, tween(450))
+            animMove = null
+            viewRot = CubeOrientation.composeView(viewRot, rot)
+            baseState = stateAt(step)
+            rotating = false
+        }
+    }
+
     LaunchedEffect(step) {
         val delta = step - lastStep
         lastStep = step
         when (delta) {
             1 -> {
-                val mv = case.algorithm[step - 1]
+                val mv = dispMove(case.algorithm[step - 1])
                 baseState = stateAt(step - 1)
                 animMove = mv
                 animProgress.snapTo(0f)
@@ -260,7 +285,7 @@ private fun CaseDetail(
                 animMove = null
             }
             -1 -> {
-                val mv = case.algorithm[step]
+                val mv = dispMove(case.algorithm[step])
                 baseState = stateAt(step + 1)
                 animMove = invertMove(mv)
                 animProgress.snapTo(0f)
@@ -333,7 +358,7 @@ private fun CaseDetail(
         }
         Text(
             if (step == 0) "Hình cần tập — khối đang ở trạng thái ví dụ."
-            else if (step < total) "Đang làm nước ${step + 1}/$total: ${case.algorithm[step]}"
+            else if (step < total) "Đang làm nước ${step + 1}/$total: ${dispMove(case.algorithm[step])}"
             else "Xong! Khối đã về trạng thái đã giải (đối với bước này).",
             fontSize = 13.sp, color = Color.Gray,
         )
@@ -346,7 +371,7 @@ private fun CaseDetail(
             modifier = Modifier.padding(vertical = 6.dp),
         ) {
             case.algorithm.forEachIndexed { i, m ->
-                MoveChip(m, highlighted = i == step && step < total)
+                MoveChip(dispMove(m), highlighted = i == step && step < total)
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -369,6 +394,16 @@ private fun CaseDetail(
                 onClick = { autoPlay = false; if (step < total) step++ },
                 enabled = step < total,
             ) { Text("Sau →") }
+        }
+        Spacer(Modifier.height(8.dp))
+        Text(
+            "Xoay khối trên tay rồi bấm — công thức tự đổi ký hiệu theo:",
+            fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1565C0),
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = { onRotate("y'") }, enabled = !rotating) { Text("◀ Trái ra trước", fontSize = 13.sp) }
+            OutlinedButton(onClick = { onRotate("y2") }, enabled = !rotating) { Text("Sau ra trước", fontSize = 13.sp) }
+            OutlinedButton(onClick = { onRotate("y") }, enabled = !rotating) { Text("Phải ra trước ▶", fontSize = 13.sp) }
         }
         Spacer(Modifier.height(12.dp))
         Text(case.tip, fontSize = 14.sp)

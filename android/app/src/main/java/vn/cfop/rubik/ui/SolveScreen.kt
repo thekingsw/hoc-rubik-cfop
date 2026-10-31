@@ -30,6 +30,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,12 +40,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import vn.cfop.rubik.solver.CfopSolver
 import vn.cfop.rubik.solver.Cube
+import vn.cfop.rubik.solver.CubeOrientation
 
 private val STAGE_TIPS = mapOf(
     "cross" to "Đưa 4 cạnh trắng xuống mặt dưới, khớp màu với tâm các mặt bên.",
-    "f2l" to "4 bước: đưa khe về trước-phải → hất viên kẹt lên tầng trên → xoay U về trường hợp chuẩn → làm R U R' hoặc F' U F.",
+    "f2l" to "4 bước: đưa khe về trước-phải (xoay cả khối trên tay rồi bấm nút xoay) → hất viên kẹt lên tầng trên → xoay U về trường hợp chuẩn → làm R U R' hoặc F' U F theo ký hiệu mới.",
     "oll_eo" to "Lật các cạnh tầng trên để mặt trên thành một màu.",
     "oll_co" to "Xoay các góc tầng trên để mặt trên thành một màu.",
     "pll_c" to "Đổi chỗ các góc tầng trên về đúng vị trí.",
@@ -89,13 +92,23 @@ fun SolveScreen(
     var autoPlay by remember { mutableStateOf(false) }
     val total = flat.size
 
-    // Facelet state after the first k moves.
+    // Xoay cả khối trên tay: app theo dõi hướng cầm (viewRot) và tự dịch
+    // mọi nước còn lại sang ký hiệu mới — B thật sự thành F/R/L theo hướng
+    // anh đang cầm. (Góp ý của anh 2026-10-31: "xoay khối thì công thức
+    // phải đổi theo".)
+    var viewRot by remember { mutableStateOf(CubeOrientation.identity()) }
+    var rotating by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    fun dispMove(m: String): String = CubeOrientation.translateForView(m, viewRot)
+
+    // Facelet state after the first k moves, shown in the current view
+    // orientation (rotated if the user turned the cube).
     fun stateAt(k: Int): IntArray {
         val cube = Cube(initialState)
         for (i in 0 until k) {
             cube.apply(flat[i].move)
         }
-        return cube.s
+        return CubeOrientation.applyView(cube.s, viewRot)
     }
 
     // --- Case explanations: which training case each stage is, in plain
@@ -172,13 +185,31 @@ fun SolveScreen(
     val animProgress = remember { Animatable(0f) }
     var lastCurrent by remember { mutableIntStateOf(0) }
 
+    /** Xoay cả khối trên tay rồi bấm nút — khối 3D xoay theo, các nước còn
+     *  lại tự đổi ký hiệu theo hướng cầm mới (B thành F/R/L thật). */
+    fun onRotate(rot: String) {
+        if (rotating) return
+        scope.launch {
+            rotating = true
+            autoPlay = false
+            baseState = stateAt(current)
+            animMove = rot
+            animProgress.snapTo(0f)
+            animProgress.animateTo(1f, tween(450))
+            animMove = null
+            viewRot = CubeOrientation.composeView(viewRot, rot)
+            baseState = stateAt(current)
+            rotating = false
+        }
+    }
+
     LaunchedEffect(current) {
         val delta = current - lastCurrent
         lastCurrent = current
         when (delta) {
             1 -> {
-                // One step forward: animate the move just applied.
-                val mv = flat[current - 1].move
+                // One step forward: animate the move just applied (in display notation).
+                val mv = dispMove(flat[current - 1].move)
                 baseState = stateAt(current - 1)
                 animMove = mv
                 animProgress.snapTo(0f)
@@ -188,7 +219,7 @@ fun SolveScreen(
             }
             -1 -> {
                 // One step back: animate the inverse of the move undone.
-                val mv = flat[current].move
+                val mv = dispMove(flat[current].move)
                 baseState = stateAt(current + 1)
                 animMove = invertMove(mv)
                 animProgress.snapTo(0f)
@@ -301,11 +332,36 @@ fun SolveScreen(
             )
         }
         Text(
-            "Kéo để xoay khối xem các mặt",
+            "Kéo để xoay góc nhìn (chỉ xem, không đổi ký hiệu)",
             fontSize = 12.sp,
             color = Color.Gray,
             modifier = Modifier.padding(top = 4.dp),
         )
+        Spacer(Modifier.height(8.dp))
+
+        // Xoay cả khối trên tay rồi bấm nút tương ứng — ký hiệu các nước
+        // còn lại tự đổi theo hướng cầm mới.
+        Text(
+            "Xoay khối trên tay rồi bấm:",
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFF1565C0),
+        )
+        Spacer(Modifier.height(4.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(
+                onClick = { onRotate("y'") },
+                enabled = !rotating && !done,
+            ) { Text("◀ Trái ra trước", fontSize = 13.sp) }
+            OutlinedButton(
+                onClick = { onRotate("y2") },
+                enabled = !rotating && !done,
+            ) { Text("Sau ra trước", fontSize = 13.sp) }
+            OutlinedButton(
+                onClick = { onRotate("y") },
+                enabled = !rotating && !done,
+            ) { Text("Phải ra trước ▶", fontSize = 13.sp) }
+        }
         Spacer(Modifier.height(16.dp))
 
         // Controls
@@ -395,6 +451,7 @@ fun SolveScreen(
                         val globalIdx = start + mi
                         val isNext = globalIdx == current
                         val isDoneMove = globalIdx < current
+                        val disp = dispMove(mv)
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(6.dp))
@@ -418,7 +475,7 @@ fun SolveScreen(
                             contentAlignment = Alignment.Center,
                         ) {
                             Text(
-                                mv,
+                                disp,
                                 fontSize = 15.sp,
                                 fontWeight = if (isNext) FontWeight.Bold else FontWeight.Normal,
                                 color = if (isNext) Color.White else Color.Black,
@@ -450,9 +507,12 @@ fun SolveScreen(
         }
         Spacer(Modifier.height(16.dp))
         Text(
-            "Ký hiệu: R phải, L trái, U trên, D dưới, F trước, B sau. " +
-                "M là lớp giữa (xoay như L). x là xoay cả khối theo chiều R. " +
-                "Không dấu = xoay theo chiều kim đồng hồ, ' = ngược chiều, 2 = xoay 180°.",
+            "Ký hiệu luôn theo hướng anh đang cầm khối: R là mặt bên phải, L trái, U trên, " +
+                "D dưới, F trước mặt, B sau lưng — không theo màu cố định. " +
+                "M là lớp giữa (xoay như L). " +
+                "Nếu anh xoay cả khối trên tay, bấm nút xoay tương ứng ở trên: " +
+                "khối 3D xoay theo và mọi nước còn lại tự đổi ký hiệu cho khớp. " +
+                "Không dấu = theo chiều kim đồng hồ, ' = ngược chiều, 2 = xoay 180°.",
             fontSize = 12.sp,
             color = Color.Gray,
         )

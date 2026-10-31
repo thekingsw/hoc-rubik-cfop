@@ -2,6 +2,7 @@ package vn.cfop.rubik.ui
 
 import vn.cfop.rubik.solver.CfopSolver
 import vn.cfop.rubik.solver.Cube
+import vn.cfop.rubik.solver.CubeOrientation
 
 /**
  * Training mode data: fixed CFOP patterns with a fixed algorithm each,
@@ -100,9 +101,9 @@ val F2L_CASES: List<TrainingCase> = listOf(
     // --- Xoay khối đưa khe về FR ---
     TrainingCase(
         "f2l-rot-1", "f2l", "basic", "Xoay khối về FR",
-        "Khe cần giải đang ở vị trí khác (không phải trước-phải). Xoay cả khối (y) để đưa nó về góc trước-phải rồi làm như bình thường.",
+        "Khe cần giải đang ở vị trí khác (không phải trước-phải). Xoay cả khối để đưa nó về góc trước-phải rồi làm như bình thường.",
         listOf("R", "U", "R'"), listOf("R", "U'", "R'"),
-        "Luôn đưa khe về trước-phải trước khi làm. Xoay y (cả khối sang phải) hoặc y' (sang trái)."
+        "Luôn đưa khe về trước-phải trước khi làm: xoay cả khối trên tay (y / y' / y2), rồi bấm nút xoay tương ứng trong app — công thức sẽ tự đổi ký hiệu theo hướng cầm mới của anh."
     ),
 )
 
@@ -129,7 +130,15 @@ val PLL_CASES: List<TrainingCase> = listOf(
     TrainingCase("pll-z", "pll", "basic", "Đổi cạnh kề (Z)", "2 cặp cạnh kề nhau đổi chỗ cho nhau.", listOf("M2", "U", "M2", "U", "M'", "U2", "M2", "U2", "M'", "U2"), listOf("U2", "M", "U2", "M2", "U2", "M", "U'", "M2", "U'", "M2"), "2 cạnh đúng nằm kề nhau."),
 )
 
-val ALL_TRAINING_CASES: List<TrainingCase> = F2L_CASES + OLL_CASES + PLL_CASES
+val ALL_TRAINING_CASES: List<TrainingCase> = (F2L_CASES + OLL_CASES + PLL_CASES).map {
+    // v4: loại bỏ xoay cả khối (x/y/z) khỏi công thức — dịch thành các nước
+    // mặt thường để ký hiệu luôn theo hướng người học đang cầm khối.
+    // Trạng thái mẫu và tính đúng đắn của công thức được giữ nguyên.
+    it.copy(
+        algorithm = CubeOrientation.eliminateRotations(it.algorithm),
+        setup = CubeOrientation.eliminateRotations(it.setup)
+    )
+}
 
 // ------------------------------------------------------------ Theory
 val THEORY_F2L = """
@@ -141,7 +150,10 @@ CHỈ CẦN NHỚ 4 BƯỚC (không cần học 41 công thức):
 
 BƯỚC 1 — Xoay cả khối đưa khe về trước-phải:
 Luôn làm việc ở khe TRƯỚC-PHẢI (FR). Nếu khe cần giải đang ở chỗ khác,
-xoay cả khối (y: sang phải, y': sang trái) để đưa nó về FR.
+xoay cả khối trên tay để đưa nó về FR, rồi bấm nút xoay tương ứng trong
+app (Trái/Phải/Sau ra trước) — mọi công thức sẽ tự đổi ký hiệu theo hướng
+cầm mới của anh. Ký hiệu luôn theo vị trí (R = bên phải, F = trước mặt),
+không theo màu cố định, nên anh cứ nhìn vị trí mà xoay.
 
 BƯỚC 2 — Đưa 2 viên lên tầng trên:
 Tìm 2 viên của cặp (góc có trắng + cạnh). Nếu chúng đang ở tầng trên rồi thì tốt.

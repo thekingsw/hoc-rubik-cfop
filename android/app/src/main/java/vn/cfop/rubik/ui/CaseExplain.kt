@@ -59,19 +59,24 @@ fun describeF2LSteps(state: IntArray, pairIndex: Int, moves: List<String>): Stri
     }
     val pos = describeF2LPosition(state, pairIndex)
     
-    // Xác định khe: pairIndex 0=FR (xanh lá-cam), 1,2,3 là các khe khác
-    val slotNames = listOf("trước-phải (xanh lá - cam)", "sau-phải", "sau-trái", "trước-trái")
+    // Xác định khe: pairIndex là cặp màu; khe nhà của từng cặp:
+    // 0=trước-phải (xanh lá-cam), 1=trước-trái (xanh lá-đỏ),
+    // 2=sau-phải (xanh dương-cam), 3=sau-trái (xanh dương-đỏ)
+    val slotNames = listOf(
+        "trước-phải (xanh lá - cam)",
+        "trước-trái (xanh lá - đỏ)",
+        "sau-phải (xanh dương - cam)",
+        "sau-trái (xanh dương - đỏ)"
+    )
     val slotName = if (pairIndex in slotNames.indices) slotNames[pairIndex] else "cần giải"
-    
+
+    // v4: công thức đã loại bỏ xoay cả khối — ký hiệu luôn theo hướng
+    // anh đang cầm (nút xoay trong app sẽ tự dịch khi anh xoay khối).
     val steps = StringBuilder()
     steps.append("Làm theo 4 bước:\n")
-    
+
     // Bước 1: Đưa khe về FR
-    if (pairIndex == 0) {
-        steps.append("1. Khe đang ở trước-phải rồi, không cần xoay khối.\n")
-    } else {
-        steps.append("1. Xoay cả khối (y) để đưa khe $slotName về trước-phải.\n")
-    }
+    steps.append("1. Đưa khe $slotName về trước-phải (xoay cả khối trên tay rồi bấm nút xoay trong app).\n")
     
     // Bước 2: Hất viên kẹt lên
     steps.append("2. $pos")
@@ -81,8 +86,9 @@ fun describeF2LSteps(state: IntArray, pairIndex: Int, moves: List<String>): Stri
     steps.append("\n")
     
     // Bước 3 & 4: Trường hợp chuẩn
-    // Phân tích nước đi để đoán trường hợp (đơn giản: nhìn công thức chính)
-    val coreMoves = moves.filter { it != "U" && it != "U'" && it != "U2" && it != "y" && it != "y'" }
+    // Phân tích nước đi để đoán trường hợp (đơn giản: nhìn công thức chính,
+    // bỏ qua các nước xoay U ở đầu stage)
+    val coreMoves = moves.filter { it != "U" && it != "U'" && it != "U2" }
     val mainAlg = when {
         coreMoves.take(3) == listOf("R", "U", "R'") || coreMoves.take(3) == listOf("R", "U'", "R'") -> "R U R'"
         coreMoves.take(3) == listOf("F'", "U", "F") || coreMoves.take(3) == listOf("F'", "U'", "F") -> "F' U F"

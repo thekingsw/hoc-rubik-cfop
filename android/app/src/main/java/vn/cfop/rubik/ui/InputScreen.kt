@@ -43,6 +43,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import vn.cfop.rubik.solver.CfopSolver
 import vn.cfop.rubik.solver.Cube
+import vn.cfop.rubik.solver.CubeOrientation
 
 private val COLOR_NAMES = listOf("Trắng", "Đỏ", "Xanh lá", "Vàng", "Cam", "Xanh dương")
 
@@ -132,7 +133,17 @@ fun InputScreen(
         scope.launch {
             try {
                 val stages = withContext(Dispatchers.Default) {
-                    CfopSolver.solve(Cube(state))
+                    val raw = CfopSolver.solve(Cube(state))
+                    // Bỏ các lần xoay cả khối khép kín (như x...x' ở PLL) bằng
+                    // cách dịch thành nước mặt thường — người mới học không
+                    // phải xoay khối giữa chừng công thức.
+                    raw.map { st ->
+                        CfopSolver.Stage(
+                            st.key, st.title,
+                            CubeOrientation.eliminateXZRotations(st.moves),
+                            st.pairIndex
+                        )
+                    }
                 }
                 onSolved(state.copyOf(), stages)
             } catch (e: Exception) {
