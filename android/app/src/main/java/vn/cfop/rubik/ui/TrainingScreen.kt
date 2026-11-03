@@ -8,6 +8,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -225,6 +227,7 @@ fun TrainingScreen(onBack: () -> Unit, onTest: () -> Unit) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun CaseDetail(
     case: TrainingCase,
@@ -346,8 +349,10 @@ private fun CaseDetail(
 
         // Algorithm + step controls
         Text("Công thức:", fontSize = 15.sp, fontWeight = FontWeight.Bold)
-        Row(
+        // FlowRow để công thức dài tự xuống hàng, nhìn thấy hết.
+        FlowRow(
             horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
             modifier = Modifier.padding(vertical = 6.dp),
         ) {
             case.algorithm.forEachIndexed { i, m ->
@@ -385,8 +390,10 @@ private fun CaseDetail(
             "Xoay khối đã giải theo các nước dưới đây để tạo đúng hình này, rồi tập làm công thức trên.",
             fontSize = 13.sp, color = Color.Gray,
         )
-        Row(
+        // Setup for the real cube — FlowRow để nước tạo hình dài tự xuống hàng.
+        FlowRow(
             horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
             modifier = Modifier.padding(vertical = 6.dp),
         ) {
             case.setup.forEach { m -> MoveChip(m) }

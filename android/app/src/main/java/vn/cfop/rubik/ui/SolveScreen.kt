@@ -6,6 +6,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -64,6 +66,7 @@ private fun invertMove(m: String): String = when {
     else -> m + "'"
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SolveScreen(
     initialState: IntArray,
@@ -442,10 +445,12 @@ fun SolveScreen(
                     modifier = Modifier.padding(top = 2.dp),
                 )
                 Spacer(Modifier.height(8.dp))
-                // Move chips
-                Row(
+                // Move chips — FlowRow để nhiều nước tự xuống hàng, nhìn
+                // thấy hết kể cả bước F2L/cross dài.
+                FlowRow(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     stage.moves.forEachIndexed { mi, mv ->
                         val globalIdx = start + mi
