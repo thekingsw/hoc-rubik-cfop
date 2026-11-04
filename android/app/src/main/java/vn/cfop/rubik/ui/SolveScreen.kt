@@ -1,5 +1,6 @@
 package vn.cfop.rubik.ui
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -16,13 +17,17 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
@@ -66,7 +71,114 @@ private fun invertMove(m: String): String = when {
     else -> m + "'"
 }
 
+/** Thẻ hiển thị một bước (stage): tiêu đề, giải thích, các chip nước đi. */
+@Composable
+private fun StageCard(
+    stage: CfopSolver.Stage,
+    isCurrent: Boolean,
+    isPast: Boolean,
+    explanation: String,
+    moveChips: @Composable () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .background(
+                when {
+                    isCurrent -> Color(0xFFE3F2FD)
+                    isPast -> Color(0xFFF1F8E9)
+                    else -> Color(0xFFF5F5F5)
+                },
+            )
+            .border(
+                1.dp,
+                if (isCurrent) Color(0xFF1976D2) else Color(0xFFE0E0E0),
+                RoundedCornerShape(10.dp),
+            )
+            .padding(12.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                if (isPast) "✓ " else "",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF388E3C),
+            )
+            Text(
+                stage.title,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                "${stage.moves.size} nước",
+                fontSize = 13.sp,
+                color = Color.Gray,
+            )
+        }
+        Text(
+            explanation,
+            fontSize = 13.sp,
+            color = Color(0xFF616161),
+            modifier = Modifier.padding(top = 2.dp),
+        )
+        Spacer(Modifier.height(8.dp))
+        moveChips()
+    }
+}
+
+/** Các chip nước đi của một bước, tự xuống hàng khi dài. Bấm chip để nhảy tới nước đó. */
 @OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun MoveChips(
+    stage: CfopSolver.Stage,
+    start: Int,
+    current: Int,
+    dispMove: (String) -> String,
+    onJumpToMove: (Int) -> Unit,
+) {
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        stage.moves.forEachIndexed { mi, mv ->
+            val globalIdx = start + mi
+            val isNext = globalIdx == current
+            val isDoneMove = globalIdx < current
+            val disp = dispMove(mv)
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(
+                        when {
+                            isNext -> Color(0xFF1976D2)
+                            isDoneMove -> Color(0xFFC8E6C9)
+                            else -> Color.White
+                        },
+                    )
+                    .border(
+                        1.dp,
+                        if (isNext) Color(0xFF1976D2) else Color(0xFFBDBDBD),
+                        RoundedCornerShape(6.dp),
+                    )
+                    .clickable { onJumpToMove(globalIdx) }
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    disp,
+                    fontSize = 15.sp,
+                    fontWeight = if (isNext) FontWeight.Bold else FontWeight.Normal,
+                    color = if (isNext) Color.White else Color.Black,
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun SolveScreen(
     initialState: IntArray,
@@ -94,6 +206,15 @@ fun SolveScreen(
     var current by remember { mutableIntStateOf(0) } // moves applied
     var autoPlay by remember { mutableStateOf(false) }
     val total = flat.size
+
+    // Các bước (stage) dàn hàng ngang: pager tự chạy theo bước hiện tại,
+    // lúc nào bước hiện tại cũng nằm ngay dưới khối rubik.
+    var showAllSteps by remember { mutableStateOf(false) }
+    val pagerState = rememberPagerState(pageCount = { stages.size })
+    // Về trang đầu khi đổi sang khối mới.
+    LaunchedEffect(stages) {
+        pagerState.scrollToPage(0)
+    }
 
     // Xoay cả khối trên tay: app theo dõi hướng cầm (viewRot) và tự dịch
     // mọi nước còn lại sang ký hiệu mới — B thật sự thành F/R/L theo hướng
@@ -242,6 +363,11 @@ fun SolveScreen(
     val done = current >= total
     val currentStageIndex = if (done) stages.size - 1 else flat[current].stageIndex
 
+    // Pager tự đi ngang theo bước hiện tại (từ trái sang phải).
+    LaunchedEffect(currentStageIndex) {
+        pagerState.animateScrollToPage(currentStageIndex)
+    }
+
     // Highlight what still needs fixing in the current stage, so the user
     // learns to recognise each pattern. The pieces move as the solve
     // progresses, so this follows the displayed state.
@@ -342,6 +468,50 @@ fun SolveScreen(
         )
         Spacer(Modifier.height(8.dp))
 
+        // === Bước hiện tại luôn nằm ngay dưới khối rubik ===
+        // Các bước dàn hàng ngang: pager tự đi từ trái sang phải theo tiến trình.
+        // Vuốt ngang để ngó bước khác; bấm "Bước tiếp" là pager tự về bước hiện tại.
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxWidth(),
+            key = { it },
+        ) { page ->
+            StageCard(
+                stage = stages[page],
+                isCurrent = page == currentStageIndex && !done,
+                isPast = page < currentStageIndex || done,
+                explanation = stageExplanations[page],
+            ) {
+                MoveChips(
+                    stage = stages[page],
+                    start = stageStarts[page],
+                    current = current,
+                    dispMove = ::dispMove,
+                    onJumpToMove = { idx ->
+                        autoPlay = false
+                        current = idx
+                    },
+                )
+            }
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 2.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                "Bước ${currentStageIndex + 1}/${stages.size}",
+                fontSize = 13.sp,
+                color = Color.Gray,
+            )
+            TextButton(onClick = { showAllSteps = true }) {
+                Text("📋 Xem tất cả bước", fontSize = 14.sp)
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+
         // Xoay cả khối trên tay rồi bấm nút tương ứng — ký hiệu các nước
         // còn lại tự đổi theo hướng cầm mới.
         Text(
@@ -395,102 +565,6 @@ fun SolveScreen(
         }
         Spacer(Modifier.height(16.dp))
 
-        // Stages
-        stages.forEachIndexed { si, stage ->
-            val isCurrent = si == currentStageIndex && !done
-            val isPast = si < currentStageIndex || done
-            val start = stageStarts[si]
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 10.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(
-                        when {
-                            isCurrent -> Color(0xFFE3F2FD)
-                            isPast -> Color(0xFFF1F8E9)
-                            else -> Color(0xFFF5F5F5)
-                        },
-                    )
-                    .border(
-                        1.dp,
-                        if (isCurrent) Color(0xFF1976D2) else Color(0xFFE0E0E0),
-                        RoundedCornerShape(10.dp),
-                    )
-                    .padding(12.dp),
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        if (isPast) "✓ " else "",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF388E3C),
-                    )
-                    Text(
-                        stage.title,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        "${stage.moves.size} nước",
-                        fontSize = 13.sp,
-                        color = Color.Gray,
-                    )
-                }
-                Text(
-                    stageExplanations[si],
-                    fontSize = 13.sp,
-                    color = Color(0xFF616161),
-                    modifier = Modifier.padding(top = 2.dp),
-                )
-                Spacer(Modifier.height(8.dp))
-                // Move chips — FlowRow để nhiều nước tự xuống hàng, nhìn
-                // thấy hết kể cả bước F2L/cross dài.
-                FlowRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    stage.moves.forEachIndexed { mi, mv ->
-                        val globalIdx = start + mi
-                        val isNext = globalIdx == current
-                        val isDoneMove = globalIdx < current
-                        val disp = dispMove(mv)
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(
-                                    when {
-                                        isNext -> Color(0xFF1976D2)
-                                        isDoneMove -> Color(0xFFC8E6C9)
-                                        else -> Color.White
-                                    },
-                                )
-                                .border(
-                                    1.dp,
-                                    if (isNext) Color(0xFF1976D2) else Color(0xFFBDBDBD),
-                                    RoundedCornerShape(6.dp),
-                                )
-                                .clickable {
-                                    autoPlay = false
-                                    current = globalIdx
-                                }
-                                .padding(horizontal = 8.dp, vertical = 4.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                disp,
-                                fontSize = 15.sp,
-                                fontWeight = if (isNext) FontWeight.Bold else FontWeight.Normal,
-                                color = if (isNext) Color.White else Color.Black,
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
         if (done) {
             Spacer(Modifier.height(8.dp))
             Text(
@@ -520,6 +594,46 @@ fun SolveScreen(
                 "Không dấu = theo chiều kim đồng hồ, ' = ngược chiều, 2 = xoay 180°.",
             fontSize = 12.sp,
             color = Color.Gray,
+        )
+    }
+
+    // Dialog xem tất cả bước dạng dọc (như trước đây).
+    if (showAllSteps) {
+        AlertDialog(
+            onDismissRequest = { showAllSteps = false },
+            title = { Text("Tất cả các bước", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                ) {
+                    stages.forEachIndexed { si, stage ->
+                        StageCard(
+                            stage = stage,
+                            isCurrent = si == currentStageIndex && !done,
+                            isPast = si < currentStageIndex || done,
+                            explanation = stageExplanations[si],
+                        ) {
+                            MoveChips(
+                                stage = stage,
+                                start = stageStarts[si],
+                                current = current,
+                                dispMove = ::dispMove,
+                                onJumpToMove = { idx ->
+                                    autoPlay = false
+                                    current = idx
+                                    showAllSteps = false
+                                },
+                            )
+                        }
+                        Spacer(Modifier.height(10.dp))
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showAllSteps = false }) {
+                    Text("Đóng")
+                }
+            },
         )
     }
 }
