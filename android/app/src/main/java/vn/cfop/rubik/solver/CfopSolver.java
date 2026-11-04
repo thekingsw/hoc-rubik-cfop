@@ -156,9 +156,12 @@ public final class CfopSolver {
             {23, 12}, {21, 41}, {48, 14}, {50, 39}};
     private static final String[] F2L_LABELS = {
             "xanh lá - cam", "xanh lá - đỏ", "xanh dương - cam", "xanh dương - đỏ"};
+    // KHÔNG dùng B: CFOP của người tránh mặt sau (không nhìn thấy, khó
+    // lookahead, xoay vướng tay). Chỉ U/R/L/F như người thật giải; cặp nào
+    // ở khe sau thì người giải xoay y trên tay (app đã có nút xoay).
     private static final String[] F2L_MOVES = {
             "U", "U'", "U2", "R", "R'", "R2", "L", "L'", "L2",
-            "F", "F'", "F2", "B", "B'", "B2"};
+            "F", "F'", "F2"};
 
     /** Facelets in the top layer: U face + top rows of the side faces. */
     private static boolean isTopLayerFacelet(int f) {
