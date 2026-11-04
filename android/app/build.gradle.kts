@@ -18,8 +18,10 @@ android {
         versionName = "1.0"
         // Git SHA của bản build này — dùng để so sánh với bản mới nhất trên GitHub
         // khi kiểm tra cập nhật. Lấy từ git lúc build, không cần sửa workflow.
+        // --short=7: cố định 7 ký tự để khớp với head_sha.take(7) phía app
+        // (git tự rút ngắn hơn 7 trên repo ít object nếu không chỉ định).
         val gitSha = try {
-            val proc = Runtime.getRuntime().exec(arrayOf("git", "rev-parse", "--short", "HEAD"))
+            val proc = Runtime.getRuntime().exec(arrayOf("git", "rev-parse", "--short=7", "HEAD"))
             proc.inputStream.bufferedReader().readText().trim().ifEmpty { "unknown" }
         } catch (e: Exception) {
             "unknown"

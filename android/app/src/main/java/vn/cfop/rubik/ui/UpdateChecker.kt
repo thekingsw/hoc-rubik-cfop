@@ -62,6 +62,9 @@ private fun apiGet(url: String, token: String): String {
         setRequestProperty("Authorization", "Bearer $token")
         setRequestProperty("Accept", "application/vnd.github+json")
         setRequestProperty("X-GitHub-Api-Version", "2022-11-28")
+        // Không dùng phản hồi đã cache: luôn hỏi GitHub trực tiếp để thấy run mới nhất.
+        // (Từng có trường hợp app báo "đang mới nhất" trong khi run mới đã xanh trên web.)
+        setRequestProperty("Cache-Control", "no-cache")
         connectTimeout = 15000
         readTimeout = 15000
     }
@@ -84,9 +87,13 @@ suspend fun checkForUpdate(context: Context): UpdateInfo? = withContext(Dispatch
             token
         )
         val runs = JSONObject(runsJson).getJSONArray("workflow_runs")
-        // Tìm run của workflow build Android (có artifact rubik-cfop-apk)
+        // Tìm run của workflow build Android (có artifact rubik-cfop-apk).
+        // Chỉ xét run từ sự kiện push — run của pull_request/workflow_dispatch
+        // có head_sha không khớp SHA được build (checkout merge commit),
+        // nếu lấy nhầm sẽ báo "có bản mới" ảo.
         for (i in 0 until runs.length()) {
             val run = runs.getJSONObject(i)
+            if (run.optString("event") != "push") continue
             val runId = run.getLong("id")
             val sha = run.getString("head_sha").take(7)
             val createdAt = run.getString("created_at")
