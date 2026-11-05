@@ -38,7 +38,8 @@ public final class Cube {
     public static final String[] MOVE_NAMES = {
             "U", "U'", "U2", "D", "D'", "D2", "R", "R'", "R2",
             "L", "L'", "L2", "F", "F'", "F2", "B", "B'", "B2",
-            "M", "M'", "M2", "E", "E'", "E2", "S", "S'", "S2"
+            "M", "M'", "M2", "E", "E'", "E2", "S", "S'", "S2",
+            "d", "d'", "d2",
     };
 
     /** Permutation for each move: newState[i] = oldState[perm[i]]. */
@@ -80,6 +81,17 @@ public final class Cube {
         PERM.put("x2", compose(PERM.get("x"), PERM.get("x")));
         PERM.put("y2", compose(PERM.get("y"), PERM.get("y")));
         PERM.put("z2", compose(PERM.get("z"), PERM.get("z")));
+        // Wide moves: d = D + E (two bottom layers). Used in F2L algorithms.
+        {
+            int[] pD = PERM.get("D");
+            int[] pE = PERM.get("E");
+            int[] p = compose(pD, pE);
+            int[] p2 = compose(p, p);
+            int[] pinv = compose(p2, p);
+            PERM.put("d", p);
+            PERM.put("d2", p2);
+            PERM.put("d'", pinv);
+        }
         for (Map.Entry<String, int[]> e : PERM.entrySet()) {
             int[] p = e.getValue();
             int[] inv = new int[54];
