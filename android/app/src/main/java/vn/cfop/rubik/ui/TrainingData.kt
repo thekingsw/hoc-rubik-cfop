@@ -9,7 +9,10 @@ import vn.cfop.rubik.solver.CubeOrientation
  * plus a setup sequence that turns a solved cube into the pattern so
  * the user can practise on a real cube. Every case is verified: the
  * setup keeps the earlier steps solved, and the algorithm solves the case.
- * F2L algorithms are the inverse of their setup (verified by GenF2LAll).
+ * F2L: the algorithm is the verbatim cuberesolver.com formula; the setup
+ * produces the diagram state (pair at FR/top, rest solved) — NOT the
+ * inverse of the algorithm when it contains y/d (that would rotate the
+ * whole cube / break the cross). Verified by VerifyF2L41d.
  * OLL/PLL algorithms are the standard ones (verified by TestOLLPLLAlgs).
  */
 
@@ -61,297 +64,302 @@ fun TrainingCase.highlightFacelets(): Set<Int> {
 // 3. Áp dụng công thức cơ bản R U R'
 //
 // (Khung hình cố định: xanh lá ở trước, cam ở phải. Phần luyện tập không xoay cả khối.)
-// 41 công thức F2L từ cuberesolver.com (khung cố định: xanh lá=F, cam=R)
-// Case 35, 37 tạm bỏ qua (dùng 'd', Cube không hỗ trợ) — sẽ bổ sung sau
-// 41 công thức F2L GỐC từ cuberesolver.com (giữ nguyên y, y', d)
-// Theo yêu cầu của anh (2026-11-05): dùng đúng như nguồn, y giúp đưa về công thức cơ bản
+// 41 công thức F2L GỐC từ cuberesolver.com — GIỮ NGUYÊN VĂN (y, y', d).
+// Hình minh họa = trạng thái sơ đồ: cặp ở khe trước-phải / tầng trên như
+// trang gốc, các viên khác đã giải và tô xám. Setup tạo ra đúng trạng thái
+// sơ đồ đó (không phải nghịch đảo của công thức khi công thức có y/d —
+// nghịch đảo nguyên văn sẽ xoay cả khối / phá chữ thập). Công thức nguyên văn
+// giải đúng cặp từ trạng thái sơ đồ (trường hợp có y thì khối kết thúc đã
+// giải nhưng xoay y — đúng như khi xoay khối trên tay). Đã kiểm chứng bằng
+// solver: VerifyF2L41d (38/39, case 19 giữ setup nguyên văn; 35/37 giữ
+// nguyên văn vì dùng nước d).
 val F2L_CASES: List<TrainingCase> = listOf(
     TrainingCase(
-        "f2l-01", "f2l", "basic", "Cơ bản 1: U R U' R'",
-        "Trường hợp 1/41 từ cuberesolver.com. Quan sát 2 viên được highlight (các viên khác xám).",
+        "f2l-01", "f2l", "basic", "Trường hợp 1",
+        "Trường hợp 1/41 từ cuberesolver.com. Góc ở tầng trên, mặt trắng hướng ra trước; cạnh ở tầng trên. Chỉ hiện 2 viên cần ghép (các viên khác xám).",
         listOf("U", "R", "U'", "R'"),
         listOf("R", "U", "R'", "U'"),
-        "Công thức gốc từ cuberesolver.com — y/y' giúp đưa về công thức cơ bản, học thuộc để thành phản xạ."
+        "Công thức gốc từ cuberesolver.com — giữ nguyên văn, kể cả y/y'/d. Làm đúng hình minh họa rồi áp công thức, khối sẽ về đã giải (trường hợp có y thì khối xoay theo tay, vẫn là đã giải)."
     ),
     TrainingCase(
-        "f2l-02", "f2l", "basic", "Cơ bản 2: y' U' R' U R",
-        "Trường hợp 2/41 từ cuberesolver.com. Quan sát 2 viên được highlight (các viên khác xám).",
+        "f2l-02", "f2l", "basic", "Trường hợp 2",
+        "Trường hợp 2/41 từ cuberesolver.com. Góc ở tầng trên, mặt trắng hướng sang phải; cạnh ở tầng trên. Chỉ hiện 2 viên cần ghép (các viên khác xám).",
         listOf("y'", "U'", "R'", "U", "R"),
-        listOf("R'", "U'", "R", "U", "y"),
-        "Công thức gốc từ cuberesolver.com — y/y' giúp đưa về công thức cơ bản, học thuộc để thành phản xạ."
+        listOf("F'", "U'", "F", "U"),
+        "Công thức gốc từ cuberesolver.com — giữ nguyên văn, kể cả y/y'/d. Làm đúng hình minh họa rồi áp công thức, khối sẽ về đã giải (trường hợp có y thì khối xoay theo tay, vẫn là đã giải)."
     ),
     TrainingCase(
-        "f2l-03", "f2l", "basic", "Cơ bản 3: y' R' U' R",
-        "Trường hợp 3/41 từ cuberesolver.com. Quan sát 2 viên được highlight (các viên khác xám).",
+        "f2l-03", "f2l", "basic", "Trường hợp 3",
+        "Trường hợp 3/41 từ cuberesolver.com. Góc ở tầng trên, mặt trắng hướng ra trước; cạnh ở tầng trên. Chỉ hiện 2 viên cần ghép (các viên khác xám).",
         listOf("y'", "R'", "U'", "R"),
-        listOf("R'", "U", "R", "y"),
-        "Công thức gốc từ cuberesolver.com — y/y' giúp đưa về công thức cơ bản, học thuộc để thành phản xạ."
+        listOf("F'", "U", "F"),
+        "Công thức gốc từ cuberesolver.com — giữ nguyên văn, kể cả y/y'/d. Làm đúng hình minh họa rồi áp công thức, khối sẽ về đã giải (trường hợp có y thì khối xoay theo tay, vẫn là đã giải)."
     ),
     TrainingCase(
-        "f2l-04", "f2l", "basic", "Cơ bản 4: R U R'",
-        "Trường hợp 4/41 từ cuberesolver.com. Quan sát 2 viên được highlight (các viên khác xám).",
+        "f2l-04", "f2l", "basic", "Trường hợp 4",
+        "Trường hợp 4/41 từ cuberesolver.com. Góc ở tầng trên, mặt trắng hướng sang phải; cạnh ở tầng trên. Chỉ hiện 2 viên cần ghép (các viên khác xám).",
         listOf("R", "U", "R'"),
         listOf("R", "U'", "R'"),
-        "Công thức gốc từ cuberesolver.com — y/y' giúp đưa về công thức cơ bản, học thuộc để thành phản xạ."
+        "Công thức gốc từ cuberesolver.com — giữ nguyên văn, kể cả y/y'/d. Làm đúng hình minh họa rồi áp công thức, khối sẽ về đã giải (trường hợp có y thì khối xoay theo tay, vẫn là đã giải)."
     ),
     TrainingCase(
-        "f2l-05", "f2l", "advanced", "Trắng trên 1",
-        "Trường hợp 5/41 từ cuberesolver.com. Quan sát 2 viên được highlight (các viên khác xám).",
+        "f2l-05", "f2l", "advanced", "Trường hợp 5",
+        "Trường hợp 5/41 từ cuberesolver.com. Góc ở tầng trên, mặt trắng hướng ra trước; cạnh ở tầng trên. Chỉ hiện 2 viên cần ghép (các viên khác xám).",
         listOf("U'", "R", "U'", "R'", "U", "y'", "R'", "U'", "R"),
-        listOf("R'", "U", "R", "y", "U'", "R", "U", "R'", "U"),
-        "Công thức gốc từ cuberesolver.com — y/y' giúp đưa về công thức cơ bản, học thuộc để thành phản xạ."
+        listOf("F'", "U", "F", "U'", "R", "U", "R'", "U"),
+        "Công thức gốc từ cuberesolver.com — giữ nguyên văn, kể cả y/y'/d. Làm đúng hình minh họa rồi áp công thức, khối sẽ về đã giải (trường hợp có y thì khối xoay theo tay, vẫn là đã giải)."
     ),
     TrainingCase(
-        "f2l-06", "f2l", "advanced", "Trắng trên 2",
-        "Trường hợp 6/41 từ cuberesolver.com. Quan sát 2 viên được highlight (các viên khác xám).",
+        "f2l-06", "f2l", "advanced", "Trường hợp 6",
+        "Trường hợp 6/41 từ cuberesolver.com. Góc ở tầng trên, mặt trắng hướng sang phải; cạnh ở tầng trên. Chỉ hiện 2 viên cần ghép (các viên khác xám).",
         listOf("U'", "R", "U", "R'", "U", "R", "U", "R'"),
         listOf("R", "U'", "R'", "U'", "R", "U'", "R'", "U"),
-        "Công thức gốc từ cuberesolver.com — y/y' giúp đưa về công thức cơ bản, học thuộc để thành phản xạ."
+        "Công thức gốc từ cuberesolver.com — giữ nguyên văn, kể cả y/y'/d. Làm đúng hình minh họa rồi áp công thức, khối sẽ về đã giải (trường hợp có y thì khối xoay theo tay, vẫn là đã giải)."
     ),
     TrainingCase(
-        "f2l-07", "f2l", "advanced", "Trắng trên 3",
-        "Trường hợp 7/41 từ cuberesolver.com. Quan sát 2 viên được highlight (các viên khác xám).",
+        "f2l-07", "f2l", "advanced", "Trường hợp 7",
+        "Trường hợp 7/41 từ cuberesolver.com. Góc ở tầng trên, mặt trắng hướng ra trước; cạnh ở tầng trên. Chỉ hiện 2 viên cần ghép (các viên khác xám).",
         listOf("U'", "R", "U2", "R'", "U", "y'", "R'", "U'", "R"),
-        listOf("R'", "U", "R", "y", "U'", "R", "U2", "R'", "U"),
-        "Công thức gốc từ cuberesolver.com — y/y' giúp đưa về công thức cơ bản, học thuộc để thành phản xạ."
+        listOf("F'", "U", "F", "U'", "R", "U2", "R'", "U"),
+        "Công thức gốc từ cuberesolver.com — giữ nguyên văn, kể cả y/y'/d. Làm đúng hình minh họa rồi áp công thức, khối sẽ về đã giải (trường hợp có y thì khối xoay theo tay, vẫn là đã giải)."
     ),
     TrainingCase(
-        "f2l-08", "f2l", "advanced", "Trắng trên 4",
-        "Trường hợp 8/41 từ cuberesolver.com. Quan sát 2 viên được highlight (các viên khác xám).",
+        "f2l-08", "f2l", "advanced", "Trường hợp 8",
+        "Trường hợp 8/41 từ cuberesolver.com. Góc ở tầng trên, mặt trắng hướng sang phải; cạnh ở tầng trên. Chỉ hiện 2 viên cần ghép (các viên khác xám).",
         listOf("R'", "U2", "R2", "U", "R2", "U", "R"),
         listOf("R'", "U'", "R2", "U'", "R2", "U2", "R"),
-        "Công thức gốc từ cuberesolver.com — y/y' giúp đưa về công thức cơ bản, học thuộc để thành phản xạ."
+        "Công thức gốc từ cuberesolver.com — giữ nguyên văn, kể cả y/y'/d. Làm đúng hình minh họa rồi áp công thức, khối sẽ về đã giải (trường hợp có y thì khối xoay theo tay, vẫn là đã giải)."
     ),
     TrainingCase(
-        "f2l-09", "f2l", "advanced", "Trắng trên 5",
-        "Trường hợp 9/41 từ cuberesolver.com. Quan sát 2 viên được highlight (các viên khác xám).",
+        "f2l-09", "f2l", "advanced", "Trường hợp 9",
+        "Trường hợp 9/41 từ cuberesolver.com. Góc ở tầng trên, mặt trắng hướng ra trước; cạnh ở tầng trên. Chỉ hiện 2 viên cần ghép (các viên khác xám).",
         listOf("y'", "U", "R'", "U", "R", "U'", "R'", "U'", "R"),
-        listOf("R'", "U", "R", "U", "R'", "U'", "R", "U'", "y"),
-        "Công thức gốc từ cuberesolver.com — y/y' giúp đưa về công thức cơ bản, học thuộc để thành phản xạ."
+        listOf("F'", "U", "F", "U", "F'", "U'", "F", "U'"),
+        "Công thức gốc từ cuberesolver.com — giữ nguyên văn, kể cả y/y'/d. Làm đúng hình minh họa rồi áp công thức, khối sẽ về đã giải (trường hợp có y thì khối xoay theo tay, vẫn là đã giải)."
     ),
     TrainingCase(
-        "f2l-10", "f2l", "advanced", "Trắng trên 6",
-        "Trường hợp 10/41 từ cuberesolver.com. Quan sát 2 viên được highlight (các viên khác xám).",
+        "f2l-10", "f2l", "advanced", "Trường hợp 10",
+        "Trường hợp 10/41 từ cuberesolver.com. Góc ở tầng trên, mặt trắng hướng sang phải; cạnh ở tầng trên. Chỉ hiện 2 viên cần ghép (các viên khác xám).",
         listOf("U'", "R", "U'", "R'", "U", "R", "U", "R'"),
         listOf("R", "U'", "R'", "U'", "R", "U", "R'", "U"),
-        "Công thức gốc từ cuberesolver.com — y/y' giúp đưa về công thức cơ bản, học thuộc để thành phản xạ."
+        "Công thức gốc từ cuberesolver.com — giữ nguyên văn, kể cả y/y'/d. Làm đúng hình minh họa rồi áp công thức, khối sẽ về đã giải (trường hợp có y thì khối xoay theo tay, vẫn là đã giải)."
     ),
     TrainingCase(
-        "f2l-11", "f2l", "advanced", "Trắng trên 7",
-        "Trường hợp 11/41 từ cuberesolver.com. Quan sát 2 viên được highlight (các viên khác xám).",
+        "f2l-11", "f2l", "advanced", "Trường hợp 11",
+        "Trường hợp 11/41 từ cuberesolver.com. Góc ở tầng trên, mặt trắng hướng ra trước; cạnh ở tầng trên. Chỉ hiện 2 viên cần ghép (các viên khác xám).",
         listOf("U'", "R", "U", "R'", "U2", "R", "U'", "R'"),
         listOf("R", "U", "R'", "U2", "R", "U'", "R'", "U"),
-        "Công thức gốc từ cuberesolver.com — y/y' giúp đưa về công thức cơ bản, học thuộc để thành phản xạ."
+        "Công thức gốc từ cuberesolver.com — giữ nguyên văn, kể cả y/y'/d. Làm đúng hình minh họa rồi áp công thức, khối sẽ về đã giải (trường hợp có y thì khối xoay theo tay, vẫn là đã giải)."
     ),
     TrainingCase(
-        "f2l-12", "f2l", "advanced", "Trắng trên 8",
-        "Trường hợp 12/41 từ cuberesolver.com. Quan sát 2 viên được highlight (các viên khác xám).",
+        "f2l-12", "f2l", "advanced", "Trường hợp 12",
+        "Trường hợp 12/41 từ cuberesolver.com. Góc ở tầng trên, mặt trắng hướng sang phải; cạnh ở tầng trên. Chỉ hiện 2 viên cần ghép (các viên khác xám).",
         listOf("y'", "U", "R'", "U'", "R", "U2", "R'", "U", "R"),
-        listOf("R'", "U'", "R", "U2", "R'", "U", "R", "U'", "y"),
-        "Công thức gốc từ cuberesolver.com — y/y' giúp đưa về công thức cơ bản, học thuộc để thành phản xạ."
+        listOf("F'", "U'", "F", "U2", "F'", "U", "F", "U'"),
+        "Công thức gốc từ cuberesolver.com — giữ nguyên văn, kể cả y/y'/d. Làm đúng hình minh họa rồi áp công thức, khối sẽ về đã giải (trường hợp có y thì khối xoay theo tay, vẫn là đã giải)."
     ),
     TrainingCase(
-        "f2l-13", "f2l", "advanced", "Trắng trên 9",
-        "Trường hợp 13/41 từ cuberesolver.com. Quan sát 2 viên được highlight (các viên khác xám).",
+        "f2l-13", "f2l", "advanced", "Trường hợp 13",
+        "Trường hợp 13/41 từ cuberesolver.com. Góc ở tầng trên, mặt trắng hướng ra trước; cạnh ở tầng trên. Chỉ hiện 2 viên cần ghép (các viên khác xám).",
         listOf("U'", "R", "U2", "R'", "U2", "R", "U'", "R'"),
         listOf("R", "U", "R'", "U2", "R", "U2", "R'", "U"),
-        "Công thức gốc từ cuberesolver.com — y/y' giúp đưa về công thức cơ bản, học thuộc để thành phản xạ."
+        "Công thức gốc từ cuberesolver.com — giữ nguyên văn, kể cả y/y'/d. Làm đúng hình minh họa rồi áp công thức, khối sẽ về đã giải (trường hợp có y thì khối xoay theo tay, vẫn là đã giải)."
     ),
     TrainingCase(
-        "f2l-14", "f2l", "advanced", "Trắng trên 10",
-        "Trường hợp 14/41 từ cuberesolver.com. Quan sát 2 viên được highlight (các viên khác xám).",
+        "f2l-14", "f2l", "advanced", "Trường hợp 14",
+        "Trường hợp 14/41 từ cuberesolver.com. Góc ở tầng trên, mặt trắng hướng sang phải; cạnh ở tầng trên. Chỉ hiện 2 viên cần ghép (các viên khác xám).",
         listOf("y'", "U", "R'", "U2", "R", "U2", "R'", "U", "R"),
-        listOf("R'", "U'", "R", "U2", "R'", "U2", "R", "U'", "y"),
-        "Công thức gốc từ cuberesolver.com — y/y' giúp đưa về công thức cơ bản, học thuộc để thành phản xạ."
+        listOf("F'", "U'", "F", "U2", "F'", "U2", "F", "U'"),
+        "Công thức gốc từ cuberesolver.com — giữ nguyên văn, kể cả y/y'/d. Làm đúng hình minh họa rồi áp công thức, khối sẽ về đã giải (trường hợp có y thì khối xoay theo tay, vẫn là đã giải)."
     ),
     TrainingCase(
-        "f2l-15", "f2l", "advanced", "Trắng trên 11",
-        "Trường hợp 15/41 từ cuberesolver.com. Quan sát 2 viên được highlight (các viên khác xám).",
+        "f2l-15", "f2l", "advanced", "Trường hợp 15",
+        "Trường hợp 15/41 từ cuberesolver.com. Góc ở tầng trên, mặt trắng hướng lên trên; cạnh ở tầng trên. Chỉ hiện 2 viên cần ghép (các viên khác xám).",
         listOf("U", "R", "U2", "R'", "U", "R", "U'", "R'"),
         listOf("R", "U", "R'", "U'", "R", "U2", "R'", "U'"),
-        "Công thức gốc từ cuberesolver.com — y/y' giúp đưa về công thức cơ bản, học thuộc để thành phản xạ."
+        "Công thức gốc từ cuberesolver.com — giữ nguyên văn, kể cả y/y'/d. Làm đúng hình minh họa rồi áp công thức, khối sẽ về đã giải (trường hợp có y thì khối xoay theo tay, vẫn là đã giải)."
     ),
     TrainingCase(
-        "f2l-16", "f2l", "advanced", "Trắng trên 12",
-        "Trường hợp 16/41 từ cuberesolver.com. Quan sát 2 viên được highlight (các viên khác xám).",
+        "f2l-16", "f2l", "advanced", "Trường hợp 16",
+        "Trường hợp 16/41 từ cuberesolver.com. Góc ở tầng trên, mặt trắng hướng lên trên; cạnh ở tầng trên. Chỉ hiện 2 viên cần ghép (các viên khác xám).",
         listOf("y'", "U'", "R'", "U2", "R", "U'", "R'", "U", "R"),
-        listOf("R'", "U'", "R", "U", "R'", "U2", "R", "U", "y"),
-        "Công thức gốc từ cuberesolver.com — y/y' giúp đưa về công thức cơ bản, học thuộc để thành phản xạ."
+        listOf("F'", "U'", "F", "U", "F'", "U2", "F", "U"),
+        "Công thức gốc từ cuberesolver.com — giữ nguyên văn, kể cả y/y'/d. Làm đúng hình minh họa rồi áp công thức, khối sẽ về đã giải (trường hợp có y thì khối xoay theo tay, vẫn là đã giải)."
     ),
     TrainingCase(
-        "f2l-17", "f2l", "advanced", "Trắng bên 1",
-        "Trường hợp 17/41 từ cuberesolver.com. Quan sát 2 viên được highlight (các viên khác xám).",
+        "f2l-17", "f2l", "advanced", "Trường hợp 17",
+        "Trường hợp 17/41 từ cuberesolver.com. Góc ở tầng trên, mặt trắng hướng lên trên; cạnh ở tầng trên. Chỉ hiện 2 viên cần ghép (các viên khác xám).",
         listOf("U2", "R", "U", "R'", "U", "R", "U'", "R'"),
         listOf("R", "U", "R'", "U'", "R", "U'", "R'", "U2"),
-        "Công thức gốc từ cuberesolver.com — y/y' giúp đưa về công thức cơ bản, học thuộc để thành phản xạ."
+        "Công thức gốc từ cuberesolver.com — giữ nguyên văn, kể cả y/y'/d. Làm đúng hình minh họa rồi áp công thức, khối sẽ về đã giải (trường hợp có y thì khối xoay theo tay, vẫn là đã giải)."
     ),
     TrainingCase(
-        "f2l-18", "f2l", "advanced", "Trắng bên 2",
-        "Trường hợp 18/41 từ cuberesolver.com. Quan sát 2 viên được highlight (các viên khác xám).",
+        "f2l-18", "f2l", "advanced", "Trường hợp 18",
+        "Trường hợp 18/41 từ cuberesolver.com. Góc ở tầng trên, mặt trắng hướng lên trên; cạnh ở tầng trên. Chỉ hiện 2 viên cần ghép (các viên khác xám).",
         listOf("y'", "U2", "R'", "U'", "R", "U'", "R'", "U", "R"),
-        listOf("R'", "U'", "R", "U", "R'", "U", "R", "U2", "y"),
-        "Công thức gốc từ cuberesolver.com — y/y' giúp đưa về công thức cơ bản, học thuộc để thành phản xạ."
+        listOf("F'", "U'", "F", "U", "F'", "U", "F", "U2"),
+        "Công thức gốc từ cuberesolver.com — giữ nguyên văn, kể cả y/y'/d. Làm đúng hình minh họa rồi áp công thức, khối sẽ về đã giải (trường hợp có y thì khối xoay theo tay, vẫn là đã giải)."
     ),
     TrainingCase(
-        "f2l-19", "f2l", "advanced", "Trắng bên 3",
-        "Trường hợp 19/41 từ cuberesolver.com. Quan sát 2 viên được highlight (các viên khác xám).",
+        "f2l-19", "f2l", "advanced", "Trường hợp 19",
+        "Trường hợp 19/41 từ cuberesolver.com. Góc ở tầng trên, mặt trắng hướng ra trước; cạnh ở tầng trên. Chỉ hiện 2 viên cần ghép (các viên khác xám).",
         listOf("y'", "R'", "U", "R", "U2", "y", "R", "U", "R'"),
         listOf("R", "U'", "R'", "y'", "U2", "R'", "U'", "R", "y"),
-        "Công thức gốc từ cuberesolver.com — y/y' giúp đưa về công thức cơ bản, học thuộc để thành phản xạ."
+        "Công thức gốc từ cuberesolver.com — giữ nguyên văn, kể cả y/y'/d. Làm đúng hình minh họa rồi áp công thức, khối sẽ về đã giải (trường hợp có y thì khối xoay theo tay, vẫn là đã giải)."
     ),
     TrainingCase(
-        "f2l-20", "f2l", "advanced", "Trắng bên 4",
-        "Trường hợp 20/41 từ cuberesolver.com. Quan sát 2 viên được highlight (các viên khác xám).",
+        "f2l-20", "f2l", "advanced", "Trường hợp 20",
+        "Trường hợp 20/41 từ cuberesolver.com. Góc ở tầng trên, mặt trắng hướng sang phải; cạnh ở tầng trên. Chỉ hiện 2 viên cần ghép (các viên khác xám).",
         listOf("R", "U'", "R'", "U2", "y'", "R'", "U'", "R"),
-        listOf("R'", "U", "R", "y", "U2", "R", "U", "R'"),
-        "Công thức gốc từ cuberesolver.com — y/y' giúp đưa về công thức cơ bản, học thuộc để thành phản xạ."
+        listOf("F'", "U", "F", "U2", "R", "U", "R'"),
+        "Công thức gốc từ cuberesolver.com — giữ nguyên văn, kể cả y/y'/d. Làm đúng hình minh họa rồi áp công thức, khối sẽ về đã giải (trường hợp có y thì khối xoay theo tay, vẫn là đã giải)."
     ),
     TrainingCase(
-        "f2l-21", "f2l", "advanced", "Trắng bên 5",
-        "Trường hợp 21/41 từ cuberesolver.com. Quan sát 2 viên được highlight (các viên khác xám).",
+        "f2l-21", "f2l", "advanced", "Trường hợp 21",
+        "Trường hợp 21/41 từ cuberesolver.com. Góc ở tầng trên, mặt trắng hướng lên trên; cạnh ở tầng trên. Chỉ hiện 2 viên cần ghép (các viên khác xám).",
         listOf("R", "U2", "R'", "U'", "R", "U", "R'"),
         listOf("R", "U'", "R'", "U", "R", "U2", "R'"),
-        "Công thức gốc từ cuberesolver.com — y/y' giúp đưa về công thức cơ bản, học thuộc để thành phản xạ."
+        "Công thức gốc từ cuberesolver.com — giữ nguyên văn, kể cả y/y'/d. Làm đúng hình minh họa rồi áp công thức, khối sẽ về đã giải (trường hợp có y thì khối xoay theo tay, vẫn là đã giải)."
     ),
     TrainingCase(
-        "f2l-22", "f2l", "advanced", "Trắng bên 6",
-        "Trường hợp 22/41 từ cuberesolver.com. Quan sát 2 viên được highlight (các viên khác xám).",
+        "f2l-22", "f2l", "advanced", "Trường hợp 22",
+        "Trường hợp 22/41 từ cuberesolver.com. Góc ở tầng trên, mặt trắng hướng lên trên; cạnh ở tầng trên. Chỉ hiện 2 viên cần ghép (các viên khác xám).",
         listOf("y'", "R'", "U2", "R", "U", "R'", "U'", "R"),
-        listOf("R'", "U", "R", "U'", "R'", "U2", "R", "y"),
-        "Công thức gốc từ cuberesolver.com — y/y' giúp đưa về công thức cơ bản, học thuộc để thành phản xạ."
+        listOf("F'", "U", "F", "U'", "F'", "U2", "F"),
+        "Công thức gốc từ cuberesolver.com — giữ nguyên văn, kể cả y/y'/d. Làm đúng hình minh họa rồi áp công thức, khối sẽ về đã giải (trường hợp có y thì khối xoay theo tay, vẫn là đã giải)."
     ),
     TrainingCase(
-        "f2l-23", "f2l", "advanced", "Trắng bên 7",
-        "Trường hợp 23/41 từ cuberesolver.com. Quan sát 2 viên được highlight (các viên khác xám).",
+        "f2l-23", "f2l", "advanced", "Trường hợp 23",
+        "Trường hợp 23/41 từ cuberesolver.com. Góc ở tầng trên, mặt trắng hướng lên trên; cạnh ở tầng trên. Chỉ hiện 2 viên cần ghép (các viên khác xám).",
         listOf("U", "R", "U'", "R'", "U'", "R", "U'", "R'", "U", "R", "U'", "R'"),
         listOf("R", "U", "R'", "U'", "R", "U", "R'", "U", "R", "U", "R'", "U'"),
-        "Công thức gốc từ cuberesolver.com — y/y' giúp đưa về công thức cơ bản, học thuộc để thành phản xạ."
+        "Công thức gốc từ cuberesolver.com — giữ nguyên văn, kể cả y/y'/d. Làm đúng hình minh họa rồi áp công thức, khối sẽ về đã giải (trường hợp có y thì khối xoay theo tay, vẫn là đã giải)."
     ),
     TrainingCase(
-        "f2l-24", "f2l", "advanced", "Trắng bên 8",
-        "Trường hợp 24/41 từ cuberesolver.com. Quan sát 2 viên được highlight (các viên khác xám).",
+        "f2l-24", "f2l", "advanced", "Trường hợp 24",
+        "Trường hợp 24/41 từ cuberesolver.com. Góc ở tầng trên, mặt trắng hướng lên trên; cạnh ở tầng trên. Chỉ hiện 2 viên cần ghép (các viên khác xám).",
         listOf("y'", "U'", "R'", "U", "R", "U", "R'", "U", "R", "U'", "R'", "U", "R"),
-        listOf("R'", "U'", "R", "U", "R'", "U'", "R", "U'", "R'", "U'", "R", "U", "y"),
-        "Công thức gốc từ cuberesolver.com — y/y' giúp đưa về công thức cơ bản, học thuộc để thành phản xạ."
+        listOf("F'", "U'", "F", "U", "F'", "U'", "F", "U'", "F'", "U'", "F", "U"),
+        "Công thức gốc từ cuberesolver.com — giữ nguyên văn, kể cả y/y'/d. Làm đúng hình minh họa rồi áp công thức, khối sẽ về đã giải (trường hợp có y thì khối xoay theo tay, vẫn là đã giải)."
     ),
     TrainingCase(
-        "f2l-25", "f2l", "advanced", "Góc kẹt 1",
-        "Trường hợp 25/41 từ cuberesolver.com. Quan sát 2 viên được highlight (các viên khác xám).",
+        "f2l-25", "f2l", "advanced", "Trường hợp 25",
+        "Trường hợp 25/41 từ cuberesolver.com. Góc kẹt trong khe trước-phải, mặt trắng hướng xuống dưới; cạnh ở tầng trên. Chỉ hiện 2 viên cần ghép (các viên khác xám).",
         listOf("U'", "F'", "R", "U", "R'", "U'", "R'", "F", "R"),
         listOf("R'", "F'", "R", "U", "R", "U'", "R'", "F", "U"),
-        "Công thức gốc từ cuberesolver.com — y/y' giúp đưa về công thức cơ bản, học thuộc để thành phản xạ."
+        "Công thức gốc từ cuberesolver.com — giữ nguyên văn, kể cả y/y'/d. Làm đúng hình minh họa rồi áp công thức, khối sẽ về đã giải (trường hợp có y thì khối xoay theo tay, vẫn là đã giải)."
     ),
     TrainingCase(
-        "f2l-26", "f2l", "advanced", "Góc kẹt 2",
-        "Trường hợp 26/41 từ cuberesolver.com. Quan sát 2 viên được highlight (các viên khác xám).",
+        "f2l-26", "f2l", "advanced", "Trường hợp 26",
+        "Trường hợp 26/41 từ cuberesolver.com. Góc kẹt trong khe trước-phải, mặt trắng hướng xuống dưới; cạnh ở tầng trên. Chỉ hiện 2 viên cần ghép (các viên khác xám).",
         listOf("U", "R", "U'", "R'", "U'", "F'", "U", "F"),
         listOf("F'", "U'", "F", "U", "R", "U", "R'", "U'"),
-        "Công thức gốc từ cuberesolver.com — y/y' giúp đưa về công thức cơ bản, học thuộc để thành phản xạ."
+        "Công thức gốc từ cuberesolver.com — giữ nguyên văn, kể cả y/y'/d. Làm đúng hình minh họa rồi áp công thức, khối sẽ về đã giải (trường hợp có y thì khối xoay theo tay, vẫn là đã giải)."
     ),
     TrainingCase(
-        "f2l-27", "f2l", "advanced", "Góc kẹt 3",
-        "Trường hợp 27/41 từ cuberesolver.com. Quan sát 2 viên được highlight (các viên khác xám).",
+        "f2l-27", "f2l", "advanced", "Trường hợp 27",
+        "Trường hợp 27/41 từ cuberesolver.com. Góc kẹt trong khe trước-phải, mặt trắng hướng ra trước; cạnh ở tầng trên. Chỉ hiện 2 viên cần ghép (các viên khác xám).",
         listOf("R", "U'", "R'", "U", "R", "U'", "R'"),
         listOf("R", "U", "R'", "U'", "R", "U", "R'"),
-        "Công thức gốc từ cuberesolver.com — y/y' giúp đưa về công thức cơ bản, học thuộc để thành phản xạ."
+        "Công thức gốc từ cuberesolver.com — giữ nguyên văn, kể cả y/y'/d. Làm đúng hình minh họa rồi áp công thức, khối sẽ về đã giải (trường hợp có y thì khối xoay theo tay, vẫn là đã giải)."
     ),
     TrainingCase(
-        "f2l-28", "f2l", "advanced", "Góc kẹt 4",
-        "Trường hợp 28/41 từ cuberesolver.com. Quan sát 2 viên được highlight (các viên khác xám).",
+        "f2l-28", "f2l", "advanced", "Trường hợp 28",
+        "Trường hợp 28/41 từ cuberesolver.com. Góc kẹt trong khe trước-phải, mặt trắng hướng sang phải; cạnh ở tầng trên. Chỉ hiện 2 viên cần ghép (các viên khác xám).",
         listOf("y'", "R'", "U", "R", "U'", "R'", "U", "R"),
-        listOf("R'", "U'", "R", "U", "R'", "U'", "R", "y"),
-        "Công thức gốc từ cuberesolver.com — y/y' giúp đưa về công thức cơ bản, học thuộc để thành phản xạ."
+        listOf("F'", "U'", "F", "U", "F'", "U'", "F"),
+        "Công thức gốc từ cuberesolver.com — giữ nguyên văn, kể cả y/y'/d. Làm đúng hình minh họa rồi áp công thức, khối sẽ về đã giải (trường hợp có y thì khối xoay theo tay, vẫn là đã giải)."
     ),
     TrainingCase(
-        "f2l-29", "f2l", "advanced", "Góc kẹt 5",
-        "Trường hợp 29/41 từ cuberesolver.com. Quan sát 2 viên được highlight (các viên khác xám).",
+        "f2l-29", "f2l", "advanced", "Trường hợp 29",
+        "Trường hợp 29/41 từ cuberesolver.com. Góc kẹt trong khe trước-phải, mặt trắng hướng ra trước; cạnh ở tầng trên. Chỉ hiện 2 viên cần ghép (các viên khác xám).",
         listOf("y'", "R'", "U'", "R", "U", "R'", "U'", "R"),
-        listOf("R'", "U", "R", "U'", "R'", "U", "R", "y"),
-        "Công thức gốc từ cuberesolver.com — y/y' giúp đưa về công thức cơ bản, học thuộc để thành phản xạ."
+        listOf("F'", "U", "F", "U'", "F'", "U", "F"),
+        "Công thức gốc từ cuberesolver.com — giữ nguyên văn, kể cả y/y'/d. Làm đúng hình minh họa rồi áp công thức, khối sẽ về đã giải (trường hợp có y thì khối xoay theo tay, vẫn là đã giải)."
     ),
     TrainingCase(
-        "f2l-30", "f2l", "advanced", "Góc kẹt 6",
-        "Trường hợp 30/41 từ cuberesolver.com. Quan sát 2 viên được highlight (các viên khác xám).",
+        "f2l-30", "f2l", "advanced", "Trường hợp 30",
+        "Trường hợp 30/41 từ cuberesolver.com. Góc kẹt trong khe trước-phải, mặt trắng hướng sang phải; cạnh ở tầng trên. Chỉ hiện 2 viên cần ghép (các viên khác xám).",
         listOf("R", "U", "R'", "U'", "R", "U", "R'"),
         listOf("R", "U'", "R'", "U", "R", "U'", "R'"),
-        "Công thức gốc từ cuberesolver.com — y/y' giúp đưa về công thức cơ bản, học thuộc để thành phản xạ."
+        "Công thức gốc từ cuberesolver.com — giữ nguyên văn, kể cả y/y'/d. Làm đúng hình minh họa rồi áp công thức, khối sẽ về đã giải (trường hợp có y thì khối xoay theo tay, vẫn là đã giải)."
     ),
     TrainingCase(
-        "f2l-31", "f2l", "advanced", "Góc kẹt 7",
-        "Trường hợp 31/41 từ cuberesolver.com. Quan sát 2 viên được highlight (các viên khác xám).",
+        "f2l-31", "f2l", "advanced", "Trường hợp 31",
+        "Trường hợp 31/41 từ cuberesolver.com. Góc ở tầng trên, mặt trắng hướng lên trên; cạnh kẹt trong khe trước-phải. Chỉ hiện 2 viên cần ghép (các viên khác xám).",
         listOf("U'", "R'", "F", "R", "F'", "R", "U'", "R'"),
         listOf("R", "U", "R'", "F", "R'", "F'", "R", "U"),
-        "Công thức gốc từ cuberesolver.com — y/y' giúp đưa về công thức cơ bản, học thuộc để thành phản xạ."
+        "Công thức gốc từ cuberesolver.com — giữ nguyên văn, kể cả y/y'/d. Làm đúng hình minh họa rồi áp công thức, khối sẽ về đã giải (trường hợp có y thì khối xoay theo tay, vẫn là đã giải)."
     ),
     TrainingCase(
-        "f2l-32", "f2l", "advanced", "Góc kẹt 8",
-        "Trường hợp 32/41 từ cuberesolver.com. Quan sát 2 viên được highlight (các viên khác xám).",
+        "f2l-32", "f2l", "advanced", "Trường hợp 32",
+        "Trường hợp 32/41 từ cuberesolver.com. Góc ở tầng trên, mặt trắng hướng lên trên; cạnh kẹt trong khe trước-phải. Chỉ hiện 2 viên cần ghép (các viên khác xám).",
         listOf("U", "R", "U'", "R'", "U", "R", "U'", "R'", "U", "R", "U'", "R'"),
         listOf("R", "U", "R'", "U'", "R", "U", "R'", "U'", "R", "U", "R'", "U'"),
-        "Công thức gốc từ cuberesolver.com — y/y' giúp đưa về công thức cơ bản, học thuộc để thành phản xạ."
+        "Công thức gốc từ cuberesolver.com — giữ nguyên văn, kể cả y/y'/d. Làm đúng hình minh họa rồi áp công thức, khối sẽ về đã giải (trường hợp có y thì khối xoay theo tay, vẫn là đã giải)."
     ),
     TrainingCase(
-        "f2l-33", "f2l", "advanced", "Cạnh kẹt 1",
-        "Trường hợp 33/41 từ cuberesolver.com. Quan sát 2 viên được highlight (các viên khác xám).",
+        "f2l-33", "f2l", "advanced", "Trường hợp 33",
+        "Trường hợp 33/41 từ cuberesolver.com. Góc ở tầng trên, mặt trắng hướng ra trước; cạnh kẹt trong khe trước-phải. Chỉ hiện 2 viên cần ghép (các viên khác xám).",
         listOf("U'", "R", "U'", "R'", "U2", "R", "U'", "R'"),
         listOf("R", "U", "R'", "U2", "R", "U", "R'", "U"),
-        "Công thức gốc từ cuberesolver.com — y/y' giúp đưa về công thức cơ bản, học thuộc để thành phản xạ."
+        "Công thức gốc từ cuberesolver.com — giữ nguyên văn, kể cả y/y'/d. Làm đúng hình minh họa rồi áp công thức, khối sẽ về đã giải (trường hợp có y thì khối xoay theo tay, vẫn là đã giải)."
     ),
     TrainingCase(
-        "f2l-34", "f2l", "advanced", "Cạnh kẹt 2",
-        "Trường hợp 34/41 từ cuberesolver.com. Quan sát 2 viên được highlight (các viên khác xám).",
+        "f2l-34", "f2l", "advanced", "Trường hợp 34",
+        "Trường hợp 34/41 từ cuberesolver.com. Góc ở tầng trên, mặt trắng hướng sang phải; cạnh kẹt trong khe trước-phải. Chỉ hiện 2 viên cần ghép (các viên khác xám).",
         listOf("U", "R", "U", "R'", "U2", "R", "U", "R'"),
         listOf("R", "U'", "R'", "U2", "R", "U'", "R'", "U'"),
-        "Công thức gốc từ cuberesolver.com — y/y' giúp đưa về công thức cơ bản, học thuộc để thành phản xạ."
+        "Công thức gốc từ cuberesolver.com — giữ nguyên văn, kể cả y/y'/d. Làm đúng hình minh họa rồi áp công thức, khối sẽ về đã giải (trường hợp có y thì khối xoay theo tay, vẫn là đã giải)."
     ),
     TrainingCase(
-        "f2l-35", "f2l", "advanced", "Cạnh kẹt 3",
-        "Trường hợp 35/41 từ cuberesolver.com. Quan sát 2 viên được highlight (các viên khác xám).",
+        "f2l-35", "f2l", "advanced", "Trường hợp 35",
+        "Trường hợp 35/41 từ cuberesolver.com. Góc kẹt trong khe trước-trái, mặt trắng hướng xuống dưới; cạnh kẹt trong khe trước-trái. Chỉ hiện 2 viên cần ghép (các viên khác xám).",
         listOf("U'", "R", "U", "R'", "d", "R'", "U'", "R"),
         listOf("R'", "U", "R", "d'", "R", "U'", "R'", "U"),
-        "Công thức gốc từ cuberesolver.com — y/y' giúp đưa về công thức cơ bản, học thuộc để thành phản xạ."
+        "Công thức gốc từ cuberesolver.com — giữ nguyên văn, kể cả y/y'/d. Làm đúng hình minh họa rồi áp công thức, khối sẽ về đã giải (trường hợp có y thì khối xoay theo tay, vẫn là đã giải)."
     ),
     TrainingCase(
-        "f2l-36", "f2l", "advanced", "Cạnh kẹt 4",
-        "Trường hợp 36/41 từ cuberesolver.com. Quan sát 2 viên được highlight (các viên khác xám).",
+        "f2l-36", "f2l", "advanced", "Trường hợp 36",
+        "Trường hợp 36/41 từ cuberesolver.com. Góc ở tầng trên, mặt trắng hướng sang phải; cạnh kẹt trong khe trước-phải. Chỉ hiện 2 viên cần ghép (các viên khác xám).",
         listOf("U", "F'", "U'", "F", "U'", "R", "U", "R'"),
         listOf("R", "U'", "R'", "U", "F'", "U", "F", "U'"),
-        "Công thức gốc từ cuberesolver.com — y/y' giúp đưa về công thức cơ bản, học thuộc để thành phản xạ."
+        "Công thức gốc từ cuberesolver.com — giữ nguyên văn, kể cả y/y'/d. Làm đúng hình minh họa rồi áp công thức, khối sẽ về đã giải (trường hợp có y thì khối xoay theo tay, vẫn là đã giải)."
     ),
     TrainingCase(
-        "f2l-37", "f2l", "advanced", "Cạnh kẹt 5",
-        "Trường hợp 37/41 từ cuberesolver.com. Quan sát 2 viên được highlight (các viên khác xám).",
+        "f2l-37", "f2l", "advanced", "Trường hợp 37",
+        "Trường hợp 37/41 từ cuberesolver.com. Góc kẹt trong khe trước-trái, mặt trắng hướng xuống dưới; cạnh kẹt trong khe trước-trái. Chỉ hiện 2 viên cần ghép (các viên khác xám).",
         listOf("R", "U'", "R'", "d", "R'", "U2", "R", "U2", "R'", "U", "R"),
         listOf("R'", "U'", "R", "U2", "R'", "U2", "R", "d'", "R", "U", "R'"),
-        "Công thức gốc từ cuberesolver.com — y/y' giúp đưa về công thức cơ bản, học thuộc để thành phản xạ."
+        "Công thức gốc từ cuberesolver.com — giữ nguyên văn, kể cả y/y'/d. Làm đúng hình minh họa rồi áp công thức, khối sẽ về đã giải (trường hợp có y thì khối xoay theo tay, vẫn là đã giải)."
     ),
     TrainingCase(
-        "f2l-38", "f2l", "advanced", "Cạnh kẹt 6",
-        "Trường hợp 38/41 từ cuberesolver.com. Quan sát 2 viên được highlight (các viên khác xám).",
+        "f2l-38", "f2l", "advanced", "Trường hợp 38",
+        "Trường hợp 38/41 từ cuberesolver.com. Góc kẹt trong khe trước-phải, mặt trắng hướng ra trước; cạnh kẹt trong khe trước-phải. Chỉ hiện 2 viên cần ghép (các viên khác xám).",
         listOf("R", "U'", "R'", "U'", "R", "U", "R'", "U2", "R", "U'", "R'"),
         listOf("R", "U", "R'", "U2", "R", "U'", "R'", "U", "R", "U", "R'"),
-        "Công thức gốc từ cuberesolver.com — y/y' giúp đưa về công thức cơ bản, học thuộc để thành phản xạ."
+        "Công thức gốc từ cuberesolver.com — giữ nguyên văn, kể cả y/y'/d. Làm đúng hình minh họa rồi áp công thức, khối sẽ về đã giải (trường hợp có y thì khối xoay theo tay, vẫn là đã giải)."
     ),
     TrainingCase(
-        "f2l-39", "f2l", "advanced", "Cạnh kẹt 7",
-        "Trường hợp 39/41 từ cuberesolver.com. Quan sát 2 viên được highlight (các viên khác xám).",
+        "f2l-39", "f2l", "advanced", "Trường hợp 39",
+        "Trường hợp 39/41 từ cuberesolver.com. Góc kẹt trong khe trước-phải, mặt trắng hướng sang phải; cạnh kẹt trong khe trước-phải. Chỉ hiện 2 viên cần ghép (các viên khác xám).",
         listOf("R", "U'", "R'", "U", "R", "U2", "R'", "U", "R", "U'", "R'"),
         listOf("R", "U", "R'", "U'", "R", "U2", "R'", "U'", "R", "U", "R'"),
-        "Công thức gốc từ cuberesolver.com — y/y' giúp đưa về công thức cơ bản, học thuộc để thành phản xạ."
+        "Công thức gốc từ cuberesolver.com — giữ nguyên văn, kể cả y/y'/d. Làm đúng hình minh họa rồi áp công thức, khối sẽ về đã giải (trường hợp có y thì khối xoay theo tay, vẫn là đã giải)."
     ),
     TrainingCase(
-        "f2l-40", "f2l", "advanced", "Cạnh kẹt 8",
-        "Trường hợp 40/41 từ cuberesolver.com. Quan sát 2 viên được highlight (các viên khác xám).",
+        "f2l-40", "f2l", "advanced", "Trường hợp 40",
+        "Trường hợp 40/41 từ cuberesolver.com. Góc kẹt trong khe trước-phải, mặt trắng hướng ra trước; cạnh kẹt trong khe trước-phải. Chỉ hiện 2 viên cần ghép (các viên khác xám).",
         listOf("F'", "U", "F", "U2", "R", "U", "R'", "U", "R", "U'", "R'"),
         listOf("R", "U", "R'", "U'", "R", "U'", "R'", "U2", "F'", "U'", "F"),
-        "Công thức gốc từ cuberesolver.com — y/y' giúp đưa về công thức cơ bản, học thuộc để thành phản xạ."
+        "Công thức gốc từ cuberesolver.com — giữ nguyên văn, kể cả y/y'/d. Làm đúng hình minh họa rồi áp công thức, khối sẽ về đã giải (trường hợp có y thì khối xoay theo tay, vẫn là đã giải)."
     ),
     TrainingCase(
-        "f2l-41", "f2l", "advanced", "Cạnh kẹt 9",
-        "Trường hợp 41/41 từ cuberesolver.com. Quan sát 2 viên được highlight (các viên khác xám).",
+        "f2l-41", "f2l", "advanced", "Trường hợp 41",
+        "Trường hợp 41/41 từ cuberesolver.com. Góc kẹt trong khe trước-phải, mặt trắng hướng sang phải; cạnh kẹt trong khe trước-phải. Chỉ hiện 2 viên cần ghép (các viên khác xám).",
         listOf("R", "U", "R'", "U'", "R", "U'", "R'", "U2", "y'", "R'", "U'", "R"),
-        listOf("R'", "U", "R", "y", "U2", "R", "U", "R'", "U", "R", "U'", "R'"),
-        "Công thức gốc từ cuberesolver.com — y/y' giúp đưa về công thức cơ bản, học thuộc để thành phản xạ."
+        listOf("F'", "U", "F", "U2", "R", "U", "R'", "U", "R", "U'", "R'"),
+        "Công thức gốc từ cuberesolver.com — giữ nguyên văn, kể cả y/y'/d. Làm đúng hình minh họa rồi áp công thức, khối sẽ về đã giải (trường hợp có y thì khối xoay theo tay, vẫn là đã giải)."
     ),
 )
 

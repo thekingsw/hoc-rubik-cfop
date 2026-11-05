@@ -309,7 +309,7 @@ private fun CaseDetail(
         }
     }
     val highlightHint = when (case.stage) {
-        "f2l" -> "👀 2 viên cần ghép đang nhấp nháy vàng — góc và cạnh xanh lá - cam, tìm chúng trước rồi mới xoay."
+        "f2l" -> "👀 Chỉ hiện 2 viên cần ghép (các viên khác xám) — góc và cạnh xanh lá - cam, tìm chúng trước rồi mới xoay."
         "oll" -> "👀 Các viên chưa đúng đang nhấp nháy — nhìn hình chúng tạo thành để nhận biết trường hợp."
         "pll" -> "👀 Các viên chưa về đúng chỗ đang nhấp nháy — chúng sẽ đổi chỗ cho nhau."
         else -> null
@@ -323,11 +323,14 @@ private fun CaseDetail(
         Spacer(Modifier.height(8.dp))
 
         // 3D pattern cube
+        // F2L: dim everything except the pair (gray out irrelevant pieces,
+        // like cuberesolver.com — only show the 2 relevant faces).
         Cube3DView(
             state = baseState,
             animMove = animMove,
             animProgress = animProgress.value,
-            highlight = highlight,
+            highlight = if (case.stage == "f2l") emptySet() else highlight,
+            dimExcept = if (case.stage == "f2l") highlight else emptySet(),
             modifier = Modifier.fillMaxWidth(),
         )
         if (highlightHint != null && step == 0) {
@@ -342,6 +345,8 @@ private fun CaseDetail(
         Text(
             if (step == 0) "Hình cần tập — khối đang ở trạng thái ví dụ."
             else if (step < total) "Đang làm nước ${step + 1}/$total: ${dispMove(case.algorithm[step])}"
+            else if (case.algorithm.any { it.startsWith("y") })
+                "Xong! Cặp đã về đúng chỗ, khối đã giải — khối đang xoay theo tay, xoay lại là thẳng."
             else "Xong! Khối đã về trạng thái đã giải (đối với bước này).",
             fontSize = 13.sp, color = Color.Gray,
         )
