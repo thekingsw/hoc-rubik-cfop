@@ -612,14 +612,18 @@ public final class CfopSolver {
      * trên thế chuẩn (canonical) để vẫn ổn định, đồng thời ghi nhận vào bảng
      * khi ở chế độ F2L_RECORD. Luôn kiểm chứng trước khi trả về.
      */
+    /** Case ID của lần gọi f2lPairMoves gần nhất (f2l-01..f2l-24, hoặc "special"). */
+    static String lastF2lCaseId = "";
+
     /**
      * Công thức cho cặp pairIdx theo đúng 3 bước tutorial:
      * B1: Xoay U về thế chuẩn (kStar).
      * B2: Hất 2 viên lên tầng 3 (trích xuất theo khe).
-     * B3: Áp công thức chuẩn cho thế tầng trên (bảng 41).
-     * Luôn kiểm chứng trước khi trả về.
+     * B3: Áp công thức chuẩn cho thế tầng trên (bảng 41 từ cuberesolver.com).
+     * Luôn kiểm chứng trước khi trả về. Ghi nhận case ID vào lastF2lCaseId.
      */
     private static List<String> f2lPairMoves(Cube c, int pairIdx, List<Integer> solvedPairs) {
+        lastF2lCaseId = "";
         if (pairSolved(c, pairIdx)) {
             return new ArrayList<>();
         }
@@ -655,9 +659,15 @@ public final class CfopSolver {
         if (f2lBothInTop(cc, pairIdx)) {
             int topKey = f2lTopKey(cc, pairIdx);
             alg = F2L_TOP_TABLE.get(topKey);
+            if (alg != null) {
+                // Map được với 1 trong 41 công thức luyện tập
+                String caseId = F2L_CASE_MAP.get(topKey);
+                lastF2lCaseId = (caseId != null) ? caseId : "special";
+            }
             if (alg == null) {
                 // Chưa có trong bảng 41: giải live từ thế tầng trên (ổn định),
-                // ghi nhận nếu đang ở chế độ record.
+                // đánh dấu "đặc biệt" vì không map được với 41 công thức.
+                lastF2lCaseId = "special";
                 try {
                     alg = new F2lSearch(cc, pairIdx, solvedPairs).search(14);
                     if (F2L_RECORD) {
@@ -761,9 +771,61 @@ public final class CfopSolver {
         F2L_TOP_TABLE.put(topKey, Arrays.asList(moves));
     }
 
+    /** Mapping topKey -> caseId (f2l-01..f2l-24) từ cuberesolver.com. */
+    static final Map<Integer, String> F2L_CASE_MAP = new HashMap<>();
+
     static {
-        // Bảng 41 công thức tầng trên (sẽ được sinh bởi F2LTopGen).
-        // Mỗi dòng: f2lTopPut(key, các nước).
+        // 23 key duy nhất cho 24 case tầng trên (f2l-19 trùng key với f2l-02)
+        F2L_CASE_MAP.put(595, "f2l-01");
+        F2L_CASE_MAP.put(505, "f2l-02");
+        F2L_CASE_MAP.put(613, "f2l-03");
+        F2L_CASE_MAP.put(487, "f2l-04");
+        F2L_CASE_MAP.put(631, "f2l-05");
+        F2L_CASE_MAP.put(489, "f2l-06");
+        F2L_CASE_MAP.put(640, "f2l-07");
+        F2L_CASE_MAP.put(493, "f2l-08");
+        F2L_CASE_MAP.put(604, "f2l-09");
+        F2L_CASE_MAP.put(491, "f2l-10");
+        F2L_CASE_MAP.put(597, "f2l-11");
+        F2L_CASE_MAP.put(523, "f2l-12");
+        F2L_CASE_MAP.put(601, "f2l-13");
+        F2L_CASE_MAP.put(532, "f2l-14");
+        F2L_CASE_MAP.put(7, "f2l-15");
+        F2L_CASE_MAP.put(10, "f2l-16");
+        F2L_CASE_MAP.put(5, "f2l-17");
+        F2L_CASE_MAP.put(19, "f2l-18");
+        F2L_CASE_MAP.put(496, "f2l-20");
+        F2L_CASE_MAP.put(3, "f2l-21");
+        F2L_CASE_MAP.put(46, "f2l-22");
+        F2L_CASE_MAP.put(1, "f2l-23");
+        F2L_CASE_MAP.put(37, "f2l-24");
+    }
+
+    static {
+        // 23 công thức tầng trên từ cuberesolver.com (đã verify, khung cố định)
+        f2lTopPut(595, "U", "R", "U'", "R'");
+        f2lTopPut(505, "U'", "F'", "U", "F");
+        f2lTopPut(613, "F'", "U'", "F");
+        f2lTopPut(487, "R", "U", "R'");
+        f2lTopPut(631, "U'", "R", "U'", "R'", "U", "F'", "U'", "F");
+        f2lTopPut(489, "U'", "R", "U", "R'", "U", "R", "U", "R'");
+        f2lTopPut(640, "U'", "R", "U2", "R'", "U", "F'", "U'", "F");
+        f2lTopPut(493, "R'", "U2", "R2", "U", "R2", "U", "R");
+        f2lTopPut(604, "U", "F'", "U", "F", "U'", "F'", "U'", "F");
+        f2lTopPut(491, "U'", "R", "U'", "R'", "U", "R", "U", "R'");
+        f2lTopPut(597, "U'", "R", "U", "R'", "U2", "R", "U'", "R'");
+        f2lTopPut(523, "U", "F'", "U'", "F", "U2", "F'", "U", "F");
+        f2lTopPut(601, "U'", "R", "U2", "R'", "U2", "R", "U'", "R'");
+        f2lTopPut(532, "U", "F'", "U2", "F", "U2", "F'", "U", "F");
+        f2lTopPut(7, "U", "R", "U2", "R'", "U", "R", "U'", "R'");
+        f2lTopPut(10, "U'", "F'", "U2", "F", "U'", "F'", "U", "F");
+        f2lTopPut(5, "U2", "R", "U", "R'", "U", "R", "U'", "R'");
+        f2lTopPut(19, "U2", "F'", "U'", "F", "U'", "F'", "U", "F");
+        f2lTopPut(496, "R", "U'", "R'", "U2", "F'", "U'", "F");
+        f2lTopPut(3, "R", "U2", "R'", "U'", "R", "U", "R'");
+        f2lTopPut(46, "F'", "U2", "F", "U", "F'", "U'", "F");
+        f2lTopPut(1, "U", "R", "U'", "R'", "U'", "R", "U'", "R'", "U", "R", "U'", "R'");
+        f2lTopPut(37, "U'", "F'", "U", "F", "U", "F'", "U", "F", "U'", "F'", "U", "F");
     }
 
     /** Facelets in the top layer: U face + top rows of the side faces. */
@@ -897,7 +959,7 @@ public final class CfopSolver {
         throw new IllegalStateException("piece not found: " + Arrays.toString(colours));
     }
 
-    private static boolean pairSolved(Cube cube, int pairIdx) {
+    static boolean pairSolved(Cube cube, int pairIdx) {
         int[] cc = F2L_CORNER_COLOURS[pairIdx];
         int[] ct = F2L_CORNER_TARGETS[pairIdx];
         int[] ec = F2L_EDGE_COLOURS[pairIdx];
@@ -1490,8 +1552,11 @@ public final class CfopSolver {
             mv = f2lPairMoves(c, i, solvedPairs);
             c.applySeq(mv);
             solvedPairs.add(i);
+            String caseInfo = lastF2lCaseId.isEmpty() ? ""
+                : lastF2lCaseId.equals("special") ? " (Đặc biệt — không nằm trong 41 công thức)"
+                : " (Trường hợp " + lastF2lCaseId + ")";
             stages.add(new Stage("f2l", "Cặp F2L " + (i + 1) + "/4: "
-                    + F2L_LABELS[i], mv, i));
+                    + F2L_LABELS[i] + caseInfo, mv, i));
         }
         if (!f2lSolved(c)) {
             throw new IllegalStateException("F2L did not solve");

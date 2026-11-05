@@ -54,6 +54,8 @@ fun faceViewAngles(face: Int): Pair<Float, Float> = when (face) {
  * @param animMove the move being animated (e.g. "R", "U'", "F2"), or null.
  * @param animProgress 0..1, how far [animMove] has turned.
  * @param highlight facelet indices to pulse-highlight (e.g. the F2L pair).
+ * @param dimExcept when non-empty, facelets NOT in this set are rendered
+ *   gray (for F2L practice: only show the 2 relevant faces, gray out the rest).
  * @param viewFace face to bring front-and-centre (0=U 1=R 2=F 3=D 4=L 5=B),
  *   or null to keep the current view. Applied whenever it changes.
  */
@@ -64,6 +66,7 @@ fun Cube3DView(
     animProgress: Float,
     modifier: Modifier = Modifier,
     highlight: Set<Int> = emptySet(),
+    dimExcept: Set<Int> = emptySet(),
     viewFace: Int? = null,
 ) {
     var azimuth by remember { mutableFloatStateOf(-35f) }
@@ -109,7 +112,7 @@ fun Cube3DView(
         val stickers = buildStickers(state, anim, animProgress)
 
         // Project + keep only stickers facing the viewer.
-        data class Draw(val path: Path, val colour: Color, val depth: Float, val isHighlight: Boolean)
+        data class Draw(val path: Path, val colour: Color, val depth: Float, val isHighlight: Boolean, val isDimmed: Boolean)
         val draws = ArrayList<Draw>(54)
         for (st in stickers) {
             // View-space normal: facing the viewer means z > 0.
@@ -128,7 +131,9 @@ fun Cube3DView(
                 lineTo(pts[3].x, pts[3].y)
                 close()
             }
-            draws.add(Draw(path, cubeColour(st.colour), centre.depth, st.index in highlight))
+            val isDimmed = dimExcept.isNotEmpty() && st.index !in dimExcept
+            val col = if (isDimmed) Color(0xFF9E9E9E) else cubeColour(st.colour)
+            draws.add(Draw(path, col, centre.depth, st.index in highlight, isDimmed))
         }
         // Painter's algorithm: farthest first.
         draws.sortBy { it.depth }
