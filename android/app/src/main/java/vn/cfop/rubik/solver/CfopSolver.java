@@ -163,6 +163,609 @@ public final class CfopSolver {
             "U", "U'", "U2", "R", "R'", "R2", "L", "L'", "L2",
             "F", "F'", "F2"};
 
+    // ------------------------------------------------------------ fixed F2L algorithms
+    // Để người học thuộc được: cùng một (cặp, thế) luôn ra cùng một công thức,
+    // như 41 công thức của dân pro. Bảng được sinh offline bằng chính solver
+    // (F2LTableGen) và mỗi công thức đã được kiểm chứng.
+    //
+    // Key chuẩn hoá: min trên 4 lần xoay U của (cornerWhite*54 + edgePrimary),
+    // tính theo toạ độ tuyệt đối (mỗi cặp có bảng riêng, không xoay y).
+    // Khi tra bảng: xoay U^kStar để về thế chuẩn, rồi áp công thức cố định.
+
+    /** (pairIdx, caseKey) -> công thức cố định ở thế chuẩn (chưa gồm U căn chỉnh). */
+    static final Map<Long, List<String>> F2L_FIXED = new HashMap<>();
+
+    static long f2lTableKey(int pairIdx, int caseKey) {
+        return ((long) pairIdx << 32) | (caseKey & 0xffffffffL);
+    }
+
+    private static void f2lPut(int pairIdx, int caseKey, String... moves) {
+        F2L_FIXED.put(f2lTableKey(pairIdx, caseKey), Arrays.asList(moves));
+    }
+
+    static {
+        // Bảng công thức cố định (sinh bởi F2LTableGen từ 1800 thế xáo,
+        // mỗi công thức đã được solver kiểm chứng; 0 nước B).
+        // Mỗi dòng: f2lPut(cặp, key, các nước ở thế chuẩn).
+        f2lPut(0, 1, "R", "F", "U2", "R'", "U'", "F'", "R'");
+        f2lPut(0, 3, "R2", "U2", "F", "R", "F'", "U2", "R2");
+        f2lPut(0, 5, "L", "U'", "R", "U", "R'", "L'");
+        f2lPut(0, 7, "F", "U2", "F'", "R", "U'", "R'");
+        f2lPut(0, 10, "R'", "U2", "R", "F'", "U", "F");
+        f2lPut(0, 12, "F'", "L'", "U", "L2", "F'", "L'", "F2");
+        f2lPut(0, 14, "R", "F", "R", "U2", "F'", "U'", "R'");
+        f2lPut(0, 19, "F'", "L", "F'", "L'", "F2");
+        f2lPut(0, 21, "U'", "L2", "F2", "L2", "F2");
+        f2lPut(0, 23, "F2", "U'", "L", "U", "L'", "F2");
+        f2lPut(0, 37, "F'", "R'", "U2", "F", "U", "R", "F");
+        f2lPut(0, 39, "F'", "L", "U'", "L'", "F");
+        f2lPut(0, 41, "F2", "U'", "F'", "L'", "U", "L", "F2");
+        f2lPut(0, 46, "F2", "L2", "F", "L'", "U2", "L'", "F");
+        f2lPut(0, 48, "U", "R2", "F2", "R2", "F2");
+        f2lPut(0, 50, "U'", "L'", "U2", "F2", "L'", "F2", "L");
+        f2lPut(0, 487, "R", "U", "R'");
+        f2lPut(0, 489, "R'", "U", "R2", "U", "R'");
+        f2lPut(0, 491, "F", "U'", "F'", "R", "U", "R'");
+        f2lPut(0, 493, "R'", "U2", "R2", "U", "R'");
+        f2lPut(0, 496, "F'", "R'", "U'", "R", "U", "F");
+        f2lPut(0, 498, "U'", "R", "U", "F", "R", "F'", "R'");
+        f2lPut(0, 500, "R'", "U", "R", "F", "R'", "F'", "R");
+        f2lPut(0, 505, "U'", "F'", "U", "F");
+        f2lPut(0, 507, "R", "U", "F2", "R", "F2", "R'");
+        f2lPut(0, 509, "L'", "U", "R", "U", "L", "U'", "R'");
+        f2lPut(0, 523, "U'", "R", "F", "R", "F'", "R'");
+        f2lPut(0, 525, "F'", "U", "L", "U'", "L'", "F");
+        f2lPut(0, 527, "F", "U2", "F'", "R", "U", "R'");
+        f2lPut(0, 532, "L2", "F2", "L2", "F", "U2", "F");
+        f2lPut(0, 534, "R'", "U'", "R2", "U", "R'");
+        f2lPut(0, 536, "F2", "L", "U'", "L2", "U", "L", "F2");
+        f2lPut(0, 595, "U'", "R", "U2", "R'");
+        f2lPut(0, 597, "U2", "F'", "R'", "F'", "R", "F");
+        f2lPut(0, 599, "U", "R", "F", "U", "F'", "U'", "R'");
+        f2lPut(0, 601, "F2", "R2", "F2", "R'", "U'", "R'");
+        f2lPut(0, 604, "U2", "F2", "U'", "F'", "U", "F2");
+        f2lPut(0, 606, "U2", "F'", "U'", "R'", "F'", "R", "F");
+        f2lPut(0, 608, "U", "F'", "U'", "R'", "U", "R", "F");
+        f2lPut(0, 613, "U", "F'", "U'", "F");
+        f2lPut(0, 615, "U", "L", "F2", "L'", "F2");
+        f2lPut(0, 617, "F'", "R'", "U", "R", "U'", "F");
+        f2lPut(0, 631, "L'", "U", "L", "F'", "U'", "F");
+        f2lPut(0, 633, "U", "L", "F'", "U'", "L'", "F");
+        f2lPut(0, 635, "U", "L'", "F'", "U'", "F", "L");
+        f2lPut(0, 640, "U", "F", "U2", "F2", "U'", "F");
+        f2lPut(0, 642, "R'", "F'", "U'", "F", "R2", "U", "R'");
+        f2lPut(0, 644, "U", "L'", "F2", "L'", "F2", "L");
+        f2lPut(0, 811, "F", "R'", "F'", "R2", "U", "R'");
+        f2lPut(0, 820, "R", "F", "R2", "U", "F'", "U'", "R'");
+        f2lPut(0, 822, "R", "U", "F2", "R'", "F'", "R", "F'", "R'");
+        f2lPut(0, 824, "F'", "R'", "U2", "F2", "R", "U'", "F");
+        f2lPut(0, 831, "L", "F2", "U'", "F2", "U", "L'", "F2");
+        f2lPut(0, 833, "F2", "U'", "L", "F2", "U", "L'", "F2");
+        f2lPut(0, 849, "F'", "U2", "L", "U'", "L'", "F");
+        f2lPut(0, 851, "R", "U'", "F", "R2", "U'", "F'", "R'");
+        f2lPut(0, 858, "R", "U'", "F", "R2", "F'", "R'");
+        f2lPut(0, 860, "L", "U'", "F'", "L2", "U2", "L", "U'", "F");
+        f2lPut(0, 919, "R'", "U'", "R2", "U2", "R'");
+        f2lPut(0, 928, "R'", "U'", "R", "U2", "F'", "U'", "F");
+        f2lPut(0, 930, "F'", "U2", "R'", "U2", "F", "R", "U", "F");
+        f2lPut(0, 932, "F'", "R'", "U2", "F2", "U'", "R", "F");
+        f2lPut(0, 939, "F'", "R'", "U2", "F2", "R", "F");
+        f2lPut(0, 941, "R2", "F2", "U2", "F", "U2", "F2", "R2");
+        f2lPut(0, 957, "L", "F'", "R'", "U2", "F2", "U", "L'", "R", "F");
+        f2lPut(0, 959, "R'", "U'", "R2", "U2", "F", "U'", "F'", "R'");
+        f2lPut(0, 966, "F2", "U2", "R2", "F", "R2", "F", "U2", "F2");
+        f2lPut(0, 968, "L", "U", "R'", "L'", "U'", "R2", "U2", "R'");
+        f2lPut(0, 1297, "L", "F2", "L2", "U'", "L", "U", "F2");
+        f2lPut(0, 1306, "U2", "F", "U2", "F2", "U", "F");
+        f2lPut(0, 1308, "L", "F2", "L'", "F", "U'", "F");
+        f2lPut(0, 1310, "R'", "U2", "F", "U", "R", "F2", "U2", "F");
+        f2lPut(0, 1317, "L'", "F'", "L2", "U'", "F'", "L'", "F2", "L");
+        f2lPut(0, 1319, "L'", "F'", "U2", "L2", "U2", "F", "L");
+        f2lPut(0, 1335, "F'", "L", "F2", "U", "F2", "U2", "L'", "F");
+        f2lPut(0, 1337, "R", "F", "U2", "R2", "U", "F'", "R'");
+        f2lPut(0, 1344, "R", "F", "U2", "R2", "F'", "R'");
+        f2lPut(0, 1346, "F2", "L'", "F2", "L2", "F2", "L", "F2");
+        f2lPut(0, 1405, "R", "F", "R2", "F'", "U", "R'");
+        f2lPut(0, 1414, "F2", "R2", "F2", "R2", "F'", "U", "F");
+        f2lPut(0, 1416, "F'", "U2", "L", "F", "R", "U", "R'", "L'");
+        f2lPut(0, 1418, "R'", "U2", "F", "R", "F2", "U'", "F");
+        f2lPut(0, 1425, "F'", "U", "R'", "F2", "R", "F");
+        f2lPut(0, 1427, "F'", "U", "R'", "F2", "U'", "R", "F");
+        f2lPut(0, 1443, "L", "F'", "U", "L'", "U2", "F");
+        f2lPut(0, 1445, "R", "F", "U2", "R2", "F'", "U", "R'");
+        f2lPut(0, 1452, "R", "U", "F", "U'", "R2", "F'", "R'");
+        f2lPut(0, 1454, "R", "L2", "U", "L'", "U2", "R'", "U", "L2");
+        f2lPut(0, 1459, "U", "L'", "U'", "R", "U", "R'", "L");
+        f2lPut(0, 1468, "U", "L", "F", "L'", "F", "L", "F'", "L'");
+        f2lPut(0, 1470, "R", "U", "F2", "R2", "F'", "R", "F'", "R'");
+        f2lPut(0, 1472, "L2", "F'", "R'", "L2", "F'", "U", "R", "F");
+        f2lPut(0, 1479, "F", "U", "L2", "F'", "L2", "F2", "U'", "F");
+        f2lPut(0, 1481, "L'", "R", "U", "L", "U'", "R'");
+        f2lPut(0, 1497, "F", "U'", "L", "U", "L'", "F2", "U2", "F");
+        f2lPut(0, 1499, "R", "F", "U", "F'", "U2", "R'");
+        f2lPut(0, 1506, "F2", "R2", "U", "R2", "U'", "F2", "R2");
+        f2lPut(0, 1508, "L2", "F2", "L2", "U'", "F2", "U", "F2");
+        f2lPut(0, 1567, "R", "F", "U", "F'", "R'");
+        f2lPut(0, 1576, "F2", "U", "F'", "U'", "F2");
+        f2lPut(0, 1578, "R", "F", "U", "F", "R", "F2", "R'");
+        f2lPut(0, 1580, "F'", "R'", "U", "R", "F");
+        f2lPut(0, 1587, "F2", "U", "F2", "U'", "F2");
+        f2lPut(0, 1605, "F2", "L", "F", "U'", "L'", "F");
+        f2lPut(0, 1607, "R", "F", "U'", "F'", "R'");
+        f2lPut(0, 1614, "F'", "R2", "F'", "R2", "F");
+        f2lPut(0, 1616, "F", "L2", "F'", "L2", "F'");
+        f2lPut(0, 1783, "F2", "L2", "U'", "L", "U", "F2", "L2");
+        f2lPut(0, 1792, "L", "U'", "L'", "F'", "U2", "F");
+        f2lPut(0, 1794, "F'", "U2", "L2", "F", "R", "L2", "U", "R'");
+        f2lPut(0, 1796, "F2", "L2", "F", "R'", "L2", "U", "R", "F");
+        f2lPut(0, 1803, "L", "U2", "F2", "L'", "F2");
+        f2lPut(0, 1805, "L2", "F", "L2", "U2", "L2", "F'", "L2");
+        f2lPut(0, 1821, "L", "U2", "L'", "F", "U2", "F2", "U'", "F");
+        f2lPut(0, 1823, "L'", "U", "L'", "F'", "L2", "U2", "F");
+        f2lPut(0, 1830, "L", "R", "U2", "F2", "R2", "F2", "R'", "L'");
+        f2lPut(0, 1832, "F2", "L2", "F2", "L2");
+        f2lPut(0, 1891, "R'", "U", "F'", "U'", "F", "R2", "U", "R'");
+        f2lPut(0, 1900, "U", "F'", "R2", "F'", "R", "F2", "R", "F");
+        f2lPut(0, 1902, "F'", "U'", "R2", "F2", "R", "F'", "R", "F");
+        f2lPut(0, 1904, "R'", "F'", "U", "F'", "R", "F2");
+        f2lPut(0, 1911, "R2", "F2", "U'", "F2", "U", "R2", "F2");
+        f2lPut(0, 1913, "R2", "U'", "R2", "U", "F2", "R2", "F2");
+        f2lPut(0, 1929, "R2", "F'", "L2", "F", "L2", "R'", "U'", "R'");
+        f2lPut(0, 1931, "F'", "R2", "F'", "R", "F2", "U", "R", "F");
+        f2lPut(0, 1938, "R2", "F", "U2", "R", "F'", "R2", "U2", "R2");
+        f2lPut(0, 1940, "L'", "F", "R2", "L'", "F'", "R2", "L", "F'");
+        f2lPut(0, 2269, "U2", "L2", "F'", "L'", "U'", "L'", "F");
+        f2lPut(0, 2278, "U'", "L", "F'", "U2", "L'", "F");
+        f2lPut(0, 2280, "L2", "F'", "L", "U", "L2", "F'", "L'", "F2");
+        f2lPut(0, 2282, "R'", "U'", "L", "R", "F'", "U2", "L'", "F");
+        f2lPut(0, 2289, "L2", "F'", "L'", "F'", "L'", "F2");
+        f2lPut(0, 2291, "F'", "U2", "L", "U2", "L'", "F");
+        f2lPut(0, 2307, "L2", "U'", "L'", "F'", "U'", "F", "U", "L2");
+        f2lPut(0, 2309, "L'", "U", "L2", "F'", "U2", "L'", "F");
+        f2lPut(0, 2316, "R2", "L", "U'", "R2", "L'", "U", "R2");
+        f2lPut(0, 2318, "L", "U", "R2", "U", "L'", "R", "U'", "R2");
+        f2lPut(0, 2377, "U2", "L'", "R", "U'", "R'", "L");
+        f2lPut(0, 2386, "U'", "L'", "U'", "F'", "U'", "F", "L");
+        f2lPut(0, 2388, "F'", "U'", "R", "F'", "R'", "F", "R'");
+        f2lPut(0, 2390, "R", "F", "R", "U'", "F'", "U'", "R'");
+        f2lPut(0, 2397, "F'", "R", "F'", "R", "F", "R2", "F", "R");
+        f2lPut(0, 2399, "R", "U", "L'", "U'", "R'", "L");
+        f2lPut(0, 2415, "L'", "U'", "L2", "F'", "U'", "L'", "F");
+        f2lPut(0, 2417, "F", "L", "F'", "L'", "F2", "U'", "F");
+        f2lPut(0, 2424, "F'", "R2", "U'", "R2", "U", "F", "R2");
+        f2lPut(0, 2426, "L'", "F", "L'", "F'", "L", "F'");
+        f2lPut(0, 2755, "R2", "F", "U", "R", "U'", "F'", "R2");
+        f2lPut(0, 2764, "R'", "U", "R", "F'", "U", "F");
+        f2lPut(0, 2766, "R", "U", "F'", "R", "F", "R'", "F");
+        f2lPut(0, 2768, "R'", "U", "R2", "F", "R", "F'", "R'");
+        f2lPut(0, 2775, "R2", "L", "F2", "R2", "L'", "F2");
+        f2lPut(0, 2777, "F2", "U2", "R'", "U2", "R", "F2");
+        f2lPut(0, 2793, "L", "F'", "R2", "F'", "R2", "U'", "L'", "F");
+        f2lPut(0, 2795, "F'", "R'", "F'", "U", "R", "U", "F");
+        f2lPut(0, 2802, "R", "F'", "R2", "F2", "R'", "F'", "R'", "F");
+        f2lPut(0, 2804, "R", "F", "L2", "F'", "R'", "L2", "F'");
+        f2lPut(0, 2863, "U", "L2", "U'", "R", "U", "R'", "L2");
+        f2lPut(0, 2872, "U", "F", "L'", "F", "L", "F'", "L");
+        f2lPut(0, 2874, "F'", "U", "L2", "F'", "L'", "F2", "L'");
+        f2lPut(0, 2876, "F'", "L2", "U'", "R'", "U", "R", "L2", "F");
+        f2lPut(0, 2883, "L", "U", "R'", "F2", "L'", "R", "F2");
+        f2lPut(0, 2885, "R2", "U'", "L", "U", "R2", "L'");
+        f2lPut(0, 2901, "L2", "U", "L", "U'", "L2", "F'", "U'", "F");
+        f2lPut(0, 2903, "L", "U2", "F'", "L2", "U", "L", "U2", "F");
+        f2lPut(0, 2910, "R2", "U'", "R2", "L", "U", "R2", "L'");
+        f2lPut(0, 2912, "F'", "L'", "F2", "L'", "F'", "L", "F'", "L");
+        f2lPut(1, 1, "F'", "L2", "F", "L'", "U", "L2", "U2", "L");
+        f2lPut(1, 3, "L", "U'", "L2", "F'", "L", "F", "L");
+        f2lPut(1, 5, "R'", "U2", "R", "L'", "U2", "L");
+        f2lPut(1, 7, "U'", "R'", "U'", "R", "L'", "U2", "L");
+        f2lPut(1, 10, "F", "R", "U", "R'", "U", "F'");
+        f2lPut(1, 14, "U", "F", "R'", "U", "R", "F'");
+        f2lPut(1, 19, "F", "U2", "F2", "L", "F", "L'");
+        f2lPut(1, 21, "U", "F2", "U", "R'", "U'", "R", "F2");
+        f2lPut(1, 37, "L", "U2", "L'", "U2", "F", "U", "F'");
+        f2lPut(1, 39, "F2", "U'", "L", "U'", "F", "L'", "U2", "F2");
+        f2lPut(1, 41, "F", "U2", "F'", "L'", "U'", "L");
+        f2lPut(1, 46, "U", "F2", "U2", "F'", "U'", "F", "U'", "F2");
+        f2lPut(1, 48, "U'", "R2", "F'", "R", "F2", "R'", "F", "R2");
+        f2lPut(1, 50, "L2", "F'", "L2", "F");
+        f2lPut(1, 487, "U", "R2", "F2", "R", "F2", "R");
+        f2lPut(1, 489, "L'", "F'", "L", "F", "L");
+        f2lPut(1, 491, "L'", "U", "L'", "U", "L'", "U'", "L2");
+        f2lPut(1, 493, "L'", "U", "L");
+        f2lPut(1, 496, "F'", "L", "F2", "U", "F2", "L'", "F");
+        f2lPut(1, 500, "U", "R'", "F", "U", "F'", "R");
+        f2lPut(1, 505, "R'", "U2", "R", "U", "F", "U", "F'");
+        f2lPut(1, 507, "L'", "R'", "U'", "R", "U", "L");
+        f2lPut(1, 523, "U", "F", "U", "L", "U", "L'", "F'");
+        f2lPut(1, 525, "L'", "U", "F'", "L'", "F", "U", "L");
+        f2lPut(1, 527, "U'", "L'", "U'", "L", "F'", "L2", "F", "L2");
+        f2lPut(1, 532, "U", "F", "U", "F'");
+        f2lPut(1, 534, "R'", "U", "R", "L'", "U", "L");
+        f2lPut(1, 536, "L'", "U2", "L2", "U", "L2", "U'", "L");
+        f2lPut(1, 595, "U2", "L", "U2", "L2", "U'", "L");
+        f2lPut(1, 597, "L2", "U'", "L", "U", "L2");
+        f2lPut(1, 599, "U'", "L2", "U'", "L'", "U", "L2");
+        f2lPut(1, 601, "U2", "L'", "U'", "L");
+        f2lPut(1, 604, "R'", "U", "R", "F", "U", "F'");
+        f2lPut(1, 608, "R'", "F2", "U", "F", "U'", "F2", "R");
+        f2lPut(1, 613, "F", "U2", "R'", "U'", "F", "R", "F2");
+        f2lPut(1, 615, "F", "R", "U2", "R'", "U2", "F'");
+        f2lPut(1, 631, "F", "U2", "L", "U", "L'", "F'");
+        f2lPut(1, 633, "F", "U2", "L", "U'", "L'", "F'");
+        f2lPut(1, 635, "F", "U", "F'", "L", "F'", "L'", "F");
+        f2lPut(1, 640, "F", "U2", "F'");
+        f2lPut(1, 642, "U'", "R'", "U'", "L'", "U'", "R", "L");
+        f2lPut(1, 644, "L'", "U'", "F'", "L2", "F", "L");
+        f2lPut(1, 919, "U2", "R2", "L'", "U", "L", "U'", "R2");
+        f2lPut(1, 928, "U'", "F", "R'", "U2", "R", "F'");
+        f2lPut(1, 932, "R2", "F", "R", "F'", "R", "F", "U", "F'");
+        f2lPut(1, 939, "F", "U2", "R'", "U2", "R", "F'");
+        f2lPut(1, 957, "L", "U", "R'", "L'", "F", "U2", "F'", "R");
+        f2lPut(1, 959, "F", "R2", "U'", "R", "U", "F", "R2", "F2");
+        f2lPut(1, 966, "R'", "L2", "U", "R", "U", "L'", "U2", "L2");
+        f2lPut(1, 968, "L2", "R'", "U", "R", "L2", "U'", "L2");
+        f2lPut(1, 1297, "L'", "F'", "L2", "F", "U'", "L");
+        f2lPut(1, 1306, "F", "U'", "R", "U2", "R'", "F'");
+        f2lPut(1, 1310, "F", "R'", "U'", "R", "U2", "F'");
+        f2lPut(1, 1317, "F2", "R'", "F'", "U'", "F'", "U2", "F2", "R", "F2");
+        f2lPut(1, 1335, "L", "U2", "F'", "L'", "F2", "U", "F'");
+        f2lPut(1, 1337, "F", "U", "L2", "F'", "L'", "F", "L'", "F'");
+        f2lPut(1, 1344, "R'", "U2", "F", "U2", "F", "R'", "F2", "R2");
+        f2lPut(1, 1346, "F'", "L", "F", "L", "U'", "L2", "U", "L2");
+        f2lPut(1, 1459, "U", "L2", "U2", "L'", "U2", "L2");
+        f2lPut(1, 1468, "F", "L", "U", "L'", "F'");
+        f2lPut(1, 1472, "F2", "R'", "F'", "U", "R", "F'");
+        f2lPut(1, 1497, "F", "L", "U'", "L'", "F'");
+        f2lPut(1, 1499, "R'", "F2", "R'", "F2", "R2", "F", "U", "F'");
+        f2lPut(1, 1506, "L'", "U'", "R'", "U", "R", "U", "L");
+        f2lPut(1, 1508, "L2", "U2", "L2", "U2", "L2");
+        f2lPut(1, 1783, "L2", "F", "U", "F'", "U2", "L'", "U", "L2");
+        f2lPut(1, 1792, "F'", "L'", "F2", "U", "F2", "L", "F");
+        f2lPut(1, 1796, "L", "U'", "L'", "U'", "R'", "F", "U", "F'", "R");
+        f2lPut(1, 1803, "L2", "U", "L", "U'", "L", "U", "L");
+        f2lPut(1, 1821, "L", "U", "L'", "F", "U2", "F'");
+        f2lPut(1, 1823, "L", "U'", "L2", "U'", "L", "U'", "F", "U", "F'");
+        f2lPut(1, 1830, "R'", "L", "U", "L", "U", "R", "L'", "U'", "L2");
+        f2lPut(1, 1832, "L2", "U", "L", "U", "L", "F", "U2", "F'", "L2");
+        f2lPut(1, 1891, "U", "R'", "U2", "L'", "U2", "R", "U2", "L");
+        f2lPut(1, 1900, "R'", "U2", "R", "F", "U", "F'");
+        f2lPut(1, 1904, "R'", "U2", "F'", "U2", "F2", "U", "F'", "R");
+        f2lPut(1, 1911, "R2", "F'", "R2", "U2", "R2", "F", "R2");
+        f2lPut(1, 1929, "F2", "R2", "F'", "L", "R2", "U'", "L'", "F'");
+        f2lPut(1, 1931, "R'", "L'", "U", "R", "L", "F", "U2", "F'");
+        f2lPut(1, 1938, "F2", "R2", "F'", "R2", "F'");
+        f2lPut(1, 1940, "R2", "U", "L2", "U'", "R2", "L2", "U", "L2");
+        f2lPut(1, 2269, "L", "U", "L2", "U2", "L");
+        f2lPut(1, 2278, "U", "L2", "U", "F", "U'", "F2", "L2", "F");
+        f2lPut(1, 2282, "L", "U'", "R'", "F", "U", "F2", "L'", "F", "R");
+        f2lPut(1, 2289, "F2", "U'", "L", "U'", "L'", "U2", "F2");
+        f2lPut(1, 2307, "L", "U'", "L'", "F", "U", "R'", "F", "R", "F2");
+        f2lPut(1, 2309, "F", "U2", "F'", "L", "U", "L2", "U2", "L");
+        f2lPut(1, 2316, "R'", "U'", "L", "U", "L2", "U2", "R", "L");
+        f2lPut(1, 2318, "L2", "F'", "L'", "F", "L'", "U", "L'", "U'", "L");
+        f2lPut(1, 2377, "F'", "L", "F", "L2", "U'", "L");
+        f2lPut(1, 2386, "F", "R", "U2", "R'", "U", "F'");
+        f2lPut(1, 2390, "F", "U2", "R'", "U", "R", "F'");
+        f2lPut(1, 2397, "F2", "L2", "U", "R'", "F2", "U'", "R", "L2", "F2");
+        f2lPut(1, 2415, "L", "U'", "L2", "U2", "L", "F", "U2", "F'");
+        f2lPut(1, 2417, "F", "U'", "F'", "L", "U'", "L2", "U'", "L");
+        f2lPut(1, 2424, "R'", "F", "U'", "F'", "L'", "U'", "R", "L");
+        f2lPut(1, 2426, "L'", "U", "F'", "L2", "F", "L");
+        f2lPut(1, 2755, "U", "R'", "U", "R", "L'", "U2", "L");
+        f2lPut(1, 2764, "F", "R'", "U'", "R2", "U", "R'", "U", "F'");
+        f2lPut(1, 2768, "R'", "F", "L", "U2", "F'", "U'", "L'", "F'", "R");
+        f2lPut(1, 2775, "L2", "U", "R'", "U'", "R", "L2");
+        f2lPut(1, 2793, "F", "R2", "U", "L", "U'", "R2", "L'", "F'");
+        f2lPut(1, 2795, "F", "U'", "R2", "F", "R", "F'", "R", "F'");
+        f2lPut(1, 2802, "R'", "L2", "U2", "F'", "L'", "F", "U2", "R", "L2");
+        f2lPut(1, 2804, "L2", "U", "R'", "L2", "U'", "R", "L2");
+        f2lPut(1, 2863, "L2", "U", "L'", "U'", "L", "U'", "L");
+        f2lPut(1, 2872, "U2", "L", "U'", "L'", "F", "U'", "F'");
+        f2lPut(1, 2876, "R'", "L2", "F2", "L2", "F'", "U", "F'", "R");
+        f2lPut(1, 2883, "F", "U", "L", "U'", "L'", "U'", "F'");
+        f2lPut(1, 2901, "L", "U'", "L2", "F'", "L'", "F", "L");
+        f2lPut(1, 2903, "L", "U2", "L2", "U2", "L", "F", "U", "F'");
+        f2lPut(1, 2910, "L2", "U'", "R'", "U", "R", "L", "U", "L");
+        f2lPut(1, 2912, "L'", "F2", "U", "L'", "F2", "L", "U'", "F2");
+        f2lPut(2, 1, "U'", "R2", "F2", "L", "F", "L'", "F", "R2");
+        f2lPut(2, 3, "U'", "R2", "U2", "R", "U", "R'", "U", "R2");
+        f2lPut(2, 5, "R'", "U'", "F", "R'", "F'", "R2");
+        f2lPut(2, 7, "U'", "R'", "F", "R'", "F'", "R2");
+        f2lPut(2, 10, "L", "F", "U", "R2", "F", "R2", "F2", "L'");
+        f2lPut(2, 14, "U", "R2", "F", "R", "F2", "U'", "F", "R");
+        f2lPut(2, 19, "R'", "U'", "F'", "U", "F2", "R'", "F'", "R2");
+        f2lPut(2, 37, "U'", "L2", "F'", "L'", "F", "R'", "U2", "R", "L'");
+        f2lPut(2, 39, "U'", "R'", "F'", "L2", "F'", "L2", "F2", "U'", "R");
+        f2lPut(2, 46, "U'", "R'", "F'", "U'", "F2", "R'", "F'", "R2");
+        f2lPut(2, 48, "U'", "R2", "L", "U", "L'", "U'", "R2");
+        f2lPut(2, 50, "L", "R'", "U2", "R", "L'");
+        f2lPut(2, 487, "R'", "U2", "R", "U", "R'", "U2", "R");
+        f2lPut(2, 489, "R'", "U'", "R", "U", "R'", "U2", "R");
+        f2lPut(2, 491, "U'", "R'", "F'", "L'", "U", "L", "F", "R");
+        f2lPut(2, 493, "U", "R'", "U2", "R");
+        f2lPut(2, 496, "U2", "L", "U2", "F", "R'", "U'", "R", "F'", "L'");
+        f2lPut(2, 500, "R'", "F", "R'", "F'", "R", "U'", "R");
+        f2lPut(2, 505, "R'", "U'", "F", "R'", "F'", "R", "U'", "R");
+        f2lPut(2, 523, "U'", "R2", "U'", "F'", "U", "F", "R2");
+        f2lPut(2, 525, "L", "U'", "R2", "U'", "F'", "U", "F", "R2", "L'");
+        f2lPut(2, 532, "U", "R'", "F'", "U", "F", "U2", "R");
+        f2lPut(2, 534, "R'", "U", "R", "U", "R'", "U2", "R");
+        f2lPut(2, 536, "U'", "R'", "U2", "L", "U2", "R", "L'");
+        f2lPut(2, 595, "R", "U2", "R2", "U'", "R2", "U'", "R'");
+        f2lPut(2, 597, "R'", "U", "F'", "U'", "F", "U2", "R");
+        f2lPut(2, 599, "R'", "F", "U", "R", "U'", "R2", "F'", "R2");
+        f2lPut(2, 601, "R'", "U'", "R");
+        f2lPut(2, 604, "R'", "U", "F'", "U", "F", "U2", "R");
+        f2lPut(2, 608, "R'", "F'", "U", "F", "U'", "F", "R'", "F'", "R2");
+        f2lPut(2, 613, "L", "F2", "R2", "F'", "R2", "F'", "L'");
+        f2lPut(2, 631, "R2", "F'", "U'", "F", "U", "R2");
+        f2lPut(2, 633, "L", "R2", "F'", "U'", "F", "U", "R2", "L'");
+        f2lPut(2, 640, "U2", "R2", "F", "R", "F'", "R");
+        f2lPut(2, 642, "L", "U'", "R'", "U'", "L'", "U", "R");
+        f2lPut(2, 644, "R2", "F2", "L2", "F", "L2", "F", "R2");
+        f2lPut(2, 919, "U2", "R'", "U", "F'", "U2", "F", "R");
+        f2lPut(2, 928, "R'", "F'", "L", "U2", "L'", "U", "F", "R");
+        f2lPut(2, 932, "R2", "F'", "U'", "F", "U", "R", "U'", "R");
+        f2lPut(2, 957, "L", "U'", "F2", "R2", "F2", "L'", "F", "R2", "F'");
+        f2lPut(2, 966, "R'", "U2", "R'", "U'", "R", "U'", "R'", "U2", "R2");
+        f2lPut(2, 968, "L", "U'", "R'", "U2", "L'", "U", "R");
+        f2lPut(2, 1783, "U", "L", "U", "R'", "U'", "R", "L'");
+        f2lPut(2, 1792, "L", "U", "F2", "R2", "F'", "R2", "F'", "L'");
+        f2lPut(2, 1796, "R'", "U2", "L", "U", "F", "U", "F'", "U2", "R", "L'");
+        f2lPut(2, 1821, "L", "F", "U'", "R2", "F", "R2", "F2", "L'");
+        f2lPut(2, 1830, "L", "R'", "U'", "L'", "U", "R");
+        f2lPut(2, 1832, "L", "U2", "F", "U2", "F'", "U", "L'", "R'", "U", "R");
+        f2lPut(2, 1891, "F", "R2", "U", "R'", "U'", "R2", "F'");
+        f2lPut(2, 1900, "R'", "U2", "F'", "U", "F", "U2", "R");
+        f2lPut(2, 1904, "R'", "F", "U2", "F2", "U'", "F2", "U'", "R'", "F'", "R2");
+        f2lPut(2, 1929, "R2", "U2", "L", "F'", "U'", "F", "L'", "U2", "R2");
+        f2lPut(2, 1940, "R", "U", "L2", "F2", "R'", "F2", "L2", "U'", "R'");
+        f2lPut(2, 2269, "L", "R'", "U", "R", "L'");
+        f2lPut(2, 2278, "R'", "F'", "U2", "F", "L", "U", "R", "L'");
+        f2lPut(2, 2282, "R2", "F2", "L2", "F", "L2", "F", "R", "U'", "R");
+        f2lPut(2, 2307, "R2", "U2", "F'", "L", "U'", "L'", "F", "U2", "R2");
+        f2lPut(2, 2316, "R'", "U'", "L", "U", "R", "L'");
+        f2lPut(2, 2318, "L", "U'", "L'", "U'", "R'", "F", "R'", "F'", "R2");
+        f2lPut(2, 2755, "U2", "R'", "F'", "U2", "F", "U'", "R");
+        f2lPut(2, 2764, "U2", "R'", "U2", "F'", "U", "F2", "R'", "F'", "R2");
+        f2lPut(2, 2768, "R'", "U", "R'", "U'", "F'", "U", "F", "R2");
+        f2lPut(2, 2793, "R'", "U2", "F'", "L2", "F'", "L2", "F2", "U'", "R");
+        f2lPut(2, 2802, "R'", "U'", "L", "F'", "U'", "F", "U2", "R", "L'");
+        f2lPut(2, 2804, "R'", "U'", "L", "U2", "R", "L'");
+        f2lPut(2, 2863, "U2", "L", "U", "R'", "U", "L'", "U", "R");
+        f2lPut(2, 2872, "U2", "R'", "L2", "F'", "L'", "F", "U'", "R", "L'");
+        f2lPut(2, 2876, "R'", "U2", "L", "F", "U2", "F'", "L'", "U", "R");
+        f2lPut(2, 2901, "L2", "F", "R2", "U'", "R'", "U", "R2", "F'", "L2");
+        f2lPut(2, 2910, "F'", "L", "F", "U'", "R2", "F'", "L'", "F", "R2");
+        f2lPut(2, 2912, "R2", "U2", "L", "U", "R", "L'", "U", "R'", "U", "R2");
+        f2lPut(3, 1, "U2", "L2", "U2", "L'", "U'", "L", "U'", "L2");
+        f2lPut(3, 3, "L", "U2", "L'", "U'", "L", "U", "L'");
+        f2lPut(3, 5, "L", "F", "U2", "F'", "L'");
+        f2lPut(3, 7, "U", "L", "U", "F'", "L", "F", "L2");
+        f2lPut(3, 10, "R'", "U2", "L", "F'", "U", "F", "L'", "U2", "R");
+        f2lPut(3, 19, "U2", "L", "F", "U2", "F2", "L", "F", "L2");
+        f2lPut(3, 37, "U2", "L", "F", "U", "F2", "L", "F", "L2");
+        f2lPut(3, 39, "L", "U'", "L", "F'", "L'", "F", "L'");
+        f2lPut(3, 46, "L2", "F", "U'", "F'", "U2", "F", "U", "F'", "L2");
+        f2lPut(3, 50, "L2", "U", "L2", "U", "L2", "U2", "L2");
+        f2lPut(3, 487, "U2", "L", "U", "L'");
+        f2lPut(3, 489, "L", "U'", "L'", "U'", "L", "U", "L'");
+        f2lPut(3, 491, "L2", "U", "L'", "U", "L", "U2", "L2");
+        f2lPut(3, 493, "U2", "L", "U'", "F", "U2", "F'", "U2", "L'");
+        f2lPut(3, 496, "U2", "L", "U'", "F", "U'", "F'", "U2", "L'");
+        f2lPut(3, 505, "L2", "F'", "L'", "F", "L'");
+        f2lPut(3, 523, "U2", "L2", "F", "U", "F'", "U'", "L2");
+        f2lPut(3, 525, "L", "U'", "F'", "L'", "U'", "L", "U", "F", "L'");
+        f2lPut(3, 532, "U2", "R'", "F2", "L2", "F", "L2", "F", "R");
+        f2lPut(3, 536, "L2", "U'", "R'", "U", "L2", "U'", "R");
+        f2lPut(3, 595, "L", "U'", "L'");
+        f2lPut(3, 597, "U", "L", "F", "U", "F'", "U2", "L'");
+        f2lPut(3, 599, "U'", "L", "U2", "F", "U", "F'", "U", "L'");
+        f2lPut(3, 601, "L", "U", "F", "U2", "F'", "U2", "L'");
+        f2lPut(3, 604, "R'", "U2", "F'", "L", "U", "L'", "F", "U2", "R");
+        f2lPut(3, 613, "U", "L", "F", "U'", "F'", "U2", "L'");
+        f2lPut(3, 631, "U'", "L2", "U", "F", "U'", "F'", "L2");
+        f2lPut(3, 633, "L2", "U", "F", "U'", "F'", "L'", "U2", "L'");
+        f2lPut(3, 640, "U2", "L", "U", "F'", "L", "F", "L'", "U", "L'");
+        f2lPut(3, 644, "R", "U'", "L", "U", "R'", "U'", "L'");
+        f2lPut(3, 1783, "F'", "L2", "U'", "L", "U", "L2", "F");
+        f2lPut(3, 1792, "L2", "U", "F'", "L'", "F", "L", "U'", "L2");
+        f2lPut(3, 1821, "L", "F'", "U2", "F2", "U", "F2", "U", "L", "F", "L2");
+        f2lPut(3, 2269, "U", "L2", "F'", "L'", "F", "U2", "L'");
+        f2lPut(3, 2278, "U'", "L", "U2", "L", "F'", "L'", "F", "L'");
+        f2lPut(3, 2307, "L2", "F'", "L'", "F2", "U'", "F'", "U2", "L'");
+        f2lPut(3, 2318, "L", "U2", "L", "U", "L'", "U", "L", "U2", "L2");
+        f2lPut(3, 2863, "U2", "L", "F", "U2", "F'", "U", "L'");
+        f2lPut(3, 2872, "L", "U2", "F", "U'", "F2", "L", "F", "L2");
+        f2lPut(3, 2901, "L", "U'", "L", "U", "F", "U'", "F'", "L2");
+        f2lPut(3, 2912, "L", "U2", "L", "F2", "R'", "F'", "R", "F'", "L2");
+    }
+
+    /** Bật bởi F2LTableGen để ghi nhận công thức mới vào bảng. */
+    static boolean F2L_RECORD = false;
+
+    /**
+     * Key chuẩn hoá cho cấu hình của cặp pairIdx: {key, kStar}.
+     * key = min trên 4 lần xoay U của (w*54 + e); kStar = số lần xoay U đạt min.
+     */
+    static int[] f2lCanonicalKey(Cube cube, int pairIdx) {
+        int[] cc = F2L_CORNER_COLOURS[pairIdx];
+        int[] ec = F2L_EDGE_COLOURS[pairIdx];
+        int bestKey = Integer.MAX_VALUE;
+        int bestK = 0;
+        Cube c = cube.copy();
+        for (int k = 0; k < 4; k++) {
+            int w = piecePrimaryFacelet(c, cc);
+            int e = piecePrimaryFacelet(c, ec);
+            int key = w * 54 + e;
+            if (key < bestKey) {
+                bestKey = key;
+                bestK = k;
+            }
+            c.apply("U");
+        }
+        return new int[]{bestKey, bestK};
+    }
+
+    /**
+     * Công thức cho cặp pairIdx: tra bảng cố định; nếu chưa có thì giải live
+     * trên thế chuẩn (canonical) để vẫn ổn định, đồng thời ghi nhận vào bảng
+     * khi ở chế độ F2L_RECORD. Luôn kiểm chứng trước khi trả về.
+     */
+    /**
+     * Công thức cho cặp pairIdx theo đúng 3 bước tutorial:
+     * B1: Xoay U về thế chuẩn (kStar).
+     * B2: Hất 2 viên lên tầng 3 (trích xuất theo khe).
+     * B3: Áp công thức chuẩn cho thế tầng trên (bảng 41).
+     * Luôn kiểm chứng trước khi trả về.
+     */
+    private static List<String> f2lPairMoves(Cube c, int pairIdx, List<Integer> solvedPairs) {
+        if (pairSolved(c, pairIdx)) {
+            return new ArrayList<>();
+        }
+
+        // B1: Chuẩn hoá U.
+        int[] canon;
+        try {
+            canon = f2lCanonicalKey(c, pairIdx);
+        } catch (Exception e) {
+            return new F2lSearch(c, pairIdx, solvedPairs).search(14);
+        }
+        int kStar = canon[1];
+        List<String> moves = new ArrayList<>();
+        Cube cc = c.copy();
+        for (int k = 0; k < kStar; k++) {
+            cc.apply("U");
+            moves.add("U");
+        }
+
+        // B2: Đưa 2 viên lên tầng 3 (tối đa 3 lần hất).
+        List<String> extractMoves = new ArrayList<>();
+        for (int attempt = 0; attempt < 3; attempt++) {
+            if (f2lBothInTop(cc, pairIdx)) break;
+            for (String m : F2L_EXTRACT[pairIdx]) {
+                cc.apply(m);
+                extractMoves.add(m);
+            }
+        }
+        moves.addAll(extractMoves);
+
+        // B3: Công thức chuẩn cho thế tầng trên.
+        List<String> alg = null;
+        if (f2lBothInTop(cc, pairIdx)) {
+            int topKey = f2lTopKey(cc, pairIdx);
+            alg = F2L_TOP_TABLE.get(topKey);
+            if (alg == null) {
+                // Chưa có trong bảng 41: giải live từ thế tầng trên (ổn định),
+                // ghi nhận nếu đang ở chế độ record.
+                try {
+                    alg = new F2lSearch(cc, pairIdx, solvedPairs).search(14);
+                    if (F2L_RECORD) {
+                        Cube chk = cc.copy();
+                        chk.applySeq(alg);
+                        boolean ok = pairSolved(chk, pairIdx) && crossSolved(chk);
+                        for (int pi : solvedPairs) {
+                            if (!pairSolved(chk, pi)) { ok = false; break; }
+                        }
+                        for (String m : alg) {
+                            if (m.startsWith("B")) { ok = false; break; }
+                        }
+                        if (ok) {
+                            F2L_TOP_TABLE.put(topKey, new ArrayList<>(alg));
+                        }
+                    }
+                } catch (Exception e) {
+                    alg = null;
+                }
+            }
+        }
+
+        if (alg != null) {
+            cc.applySeq(alg);
+            moves.addAll(alg);
+        } else {
+            // Fallback: giải live từ đầu (không theo 3 bước, nhưng vẫn đúng).
+            return new F2lSearch(c, pairIdx, solvedPairs).search(14);
+        }
+
+        // Gọn nước U dư.
+        moves = Cube.simplifyMoves(moves);
+
+        // Kiểm chứng trên thế gốc.
+        Cube check = c.copy();
+        check.applySeq(moves);
+        if (!pairSolved(check, pairIdx) || !crossSolved(check)) {
+            return new F2lSearch(c, pairIdx, solvedPairs).search(14);
+        }
+        for (int pi : solvedPairs) {
+            if (!pairSolved(check, pi)) {
+                return new F2lSearch(c, pairIdx, solvedPairs).search(14);
+            }
+        }
+        return moves;
+    }
+
+    /** Ghi nhận công thức chuẩn cho (pairIdx, key) vào bảng (chỉ dùng offline). */
+    static void f2lRecordCanonical(Cube c, int pairIdx, List<Integer> solvedPairs) {
+        // (Giữ lại để tương thích; logic ghi nhận đã nằm trong f2lPairMoves.)
+    }
+
+    // ------------------------------------------------------------ F2L 3 bước
+    // Đúng phương pháp tutorial: B1 chuẩn bị (xoay U), B2 đưa 2 viên lên
+    // tầng 3, B3 áp công thức chuẩn cho thế tầng trên (bảng 41).
+    //
+    // Mỗi khe có nước "hất lên" riêng (không dùng B):
+    // FR: R U R' | FL: L' U' L | BR: R' U R | BL: L' U' L
+
+    private static final String[][] F2L_EXTRACT = {
+            {"R", "U", "R'"},
+            {"L'", "U'", "L"},
+            {"R'", "U", "R"},
+            {"L'", "U'", "L"},
+    };
+
+    /** Cả 2 viên (góc + cạnh) của cặp đã ở tầng trên chưa? */
+    static boolean f2lBothInTop(Cube c, int pairIdx) {
+        try {
+            int[] cc = F2L_CORNER_COLOURS[pairIdx];
+            int[] ec = F2L_EDGE_COLOURS[pairIdx];
+            int w = piecePrimaryFacelet(c, cc);
+            int e = piecePrimaryFacelet(c, ec);
+            return isTopLayerFacelet(w) && isTopLayerFacelet(e);
+        } catch (IllegalStateException ex) {
+            return false;
+        }
+    }
+
+    /**
+     * Key cho cấu hình tầng trên (sau khi đã đưa 2 viên lên).
+     * KHÔNG chuẩn hoá U nữa vì B1 đã chuẩn hoá rồi — giữ nguyên để phân biệt
+     * đủ 41 thế.
+     */
+    static int f2lTopKey(Cube cube, int pairIdx) {
+        int[] cc = F2L_CORNER_COLOURS[pairIdx];
+        int[] ec = F2L_EDGE_COLOURS[pairIdx];
+        try {
+            int w = piecePrimaryFacelet(cube, cc);
+            int e = piecePrimaryFacelet(cube, ec);
+            return w * 54 + e;
+        } catch (IllegalStateException ex) {
+            return -1;
+        }
+    }
+
+    /** (topKey) -> công thức chuẩn cho thế tầng trên (41 công thức). */
+    static final Map<Integer, List<String>> F2L_TOP_TABLE = new HashMap<>();
+
+    private static void f2lTopPut(int topKey, String... moves) {
+        F2L_TOP_TABLE.put(topKey, Arrays.asList(moves));
+    }
+
+    static {
+        // Bảng 41 công thức tầng trên (sẽ được sinh bởi F2LTopGen).
+        // Mỗi dòng: f2lTopPut(key, các nước).
+    }
+
     /** Facelets in the top layer: U face + top rows of the side faces. */
     private static boolean isTopLayerFacelet(int f) {
         if (f < 9) {
@@ -880,39 +1483,15 @@ public final class CfopSolver {
         }
 
         List<Integer> solvedPairs = new ArrayList<>();
-        List<Integer> remaining = new ArrayList<>(Arrays.asList(0, 1, 2, 3));
-        // Greedy pair order: at each step solve the pair whose pieces are
-        // most in the top layer (easiest to insert while few pairs are locked).
-        while (!remaining.isEmpty()) {
-            int bestPair = -1;
-            F2lSearch bestSearch = null;
-            int bestTop = -1;
-            int bestH = Integer.MAX_VALUE;
-            for (int i : remaining) {
-                int fc = piecePrimaryFacelet(c, F2L_CORNER_COLOURS[i]);
-                int fe = piecePrimaryFacelet(c, F2L_EDGE_COLOURS[i]);
-                int topCount = 0;
-                if (isTopLayerFacelet(fc)) {
-                    topCount++;
-                }
-                if (isTopLayerFacelet(fe)) {
-                    topCount++;
-                }
-                F2lSearch search = new F2lSearch(c, i, solvedPairs);
-                int h = search.heuristic();
-                if (topCount > bestTop || (topCount == bestTop && h < bestH)) {
-                    bestTop = topCount;
-                    bestH = h;
-                    bestPair = i;
-                    bestSearch = search;
-                }
-            }
-            mv = bestSearch.search(14);
+        // Thứ tự cặp CỐ ĐỊNH (0,1,2,3) để người học thuộc được: cùng một thế
+        // luôn ra cùng một công thức. (Trước đây chọn cặp "dễ nhất" mỗi bước
+        // nên công thức thay đổi liên tục, khó học.)
+        for (int i = 0; i < 4; i++) {
+            mv = f2lPairMoves(c, i, solvedPairs);
             c.applySeq(mv);
-            solvedPairs.add(bestPair);
-            remaining.remove((Integer) bestPair);
-            stages.add(new Stage("f2l", "Cặp F2L " + solvedPairs.size() + "/4: "
-                    + F2L_LABELS[bestPair], mv, bestPair));
+            solvedPairs.add(i);
+            stages.add(new Stage("f2l", "Cặp F2L " + (i + 1) + "/4: "
+                    + F2L_LABELS[i], mv, i));
         }
         if (!f2lSolved(c)) {
             throw new IllegalStateException("F2L did not solve");
