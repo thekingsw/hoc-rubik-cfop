@@ -55,6 +55,7 @@ class MainActivity : ComponentActivity() {
                 var screen by remember { mutableStateOf(Screen.HOME) }
                 var cubeState by remember { mutableStateOf(blankState()) }
                 var stages by remember { mutableStateOf<List<CfopSolver.Stage>>(emptyList()) }
+                var f2lOnly by remember { mutableStateOf(false) }
                 var pendingUpdate by remember { mutableStateOf<UpdateInfo?>(null) }
                 var downloadRunId by remember { mutableStateOf(0L) }
                 var downloadSha by remember { mutableStateOf("") }
@@ -128,7 +129,7 @@ class MainActivity : ComponentActivity() {
                             )
                             Spacer(Modifier.height(32.dp))
                             Button(
-                                onClick = { screen = Screen.INPUT },
+                                onClick = { f2lOnly = false; screen = Screen.INPUT },
                                 modifier = Modifier.fillMaxWidth().height(56.dp),
                             ) {
                                 Text("🧩  Giải khối của anh", fontSize = 17.sp)
@@ -136,6 +137,18 @@ class MainActivity : ComponentActivity() {
                             Spacer(Modifier.height(12.dp))
                             Text(
                                 "Nhập khối rubik đang cầm trên tay, app hướng dẫn xoay từng bước.",
+                                fontSize = 13.sp, color = Color.Gray,
+                            )
+                            Spacer(Modifier.height(24.dp))
+                            Button(
+                                onClick = { f2lOnly = true; screen = Screen.INPUT },
+                                modifier = Modifier.fillMaxWidth().height(56.dp),
+                            ) {
+                                Text("🎯  Học F2L", fontSize = 17.sp)
+                            }
+                            Spacer(Modifier.height(12.dp))
+                            Text(
+                                "Chỉ học F2L: nhập khối, app đưa 2 viên lên tầng 3, nhận diện trường hợp trong 41 công thức rồi hướng dẫn áp dụng công thức đó. Không hiện OLL/PLL.",
                                 fontSize = 13.sp, color = Color.Gray,
                             )
                             Spacer(Modifier.height(24.dp))
@@ -173,6 +186,7 @@ class MainActivity : ComponentActivity() {
                                 stages = emptyList()
                                 screen = Screen.HOME
                             },
+                            f2lOnly = f2lOnly,
                         )
                     }
                     Screen.TRAINING -> {

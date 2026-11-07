@@ -3,6 +3,7 @@ package vn.cfop.rubik.solver;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -612,8 +613,20 @@ public final class CfopSolver {
      * trên thế chuẩn (canonical) để vẫn ổn định, đồng thời ghi nhận vào bảng
      * khi ở chế độ F2L_RECORD. Luôn kiểm chứng trước khi trả về.
      */
-    /** Case ID của lần gọi f2lPairMoves gần nhất (f2l-01..f2l-24, hoặc "special"). */
+    /** Case ID của lần gọi f2lPairMoves gần nhất (f2l-01..f2l-41, hoặc "special"). */
     static String lastF2lCaseId = "";
+
+    /** Kết quả chia bước của 1 cặp F2L: bước đưa lên tầng 3 + bước công thức. */
+    static final class F2lPairResult {
+        /** Bước 1: đưa 2 viên lên tầng 3 (B1 xoay U chuẩn bị + B2 hất lên). */
+        List<String> extractMoves = new ArrayList<>();
+        /** Bước 2: công thức của trường hợp đã nhận diện (B3). */
+        List<String> formulaMoves = new ArrayList<>();
+        /** Case ID: f2l-01..f2l-41, hoặc "special" nếu không map được. */
+        String caseId = "";
+    }
+    /** Kết quả chia bước của lần gọi f2lPairMoves gần nhất. */
+    static F2lPairResult lastF2lPairResult = null;
 
     /**
      * Công thức cho cặp pairIdx theo đúng 3 bước tutorial:
@@ -624,7 +637,10 @@ public final class CfopSolver {
      */
     private static List<String> f2lPairMoves(Cube c, int pairIdx, List<Integer> solvedPairs) {
         lastF2lCaseId = "";
+        lastF2lPairResult = null;
         if (pairSolved(c, pairIdx)) {
+            F2lPairResult r = new F2lPairResult();
+            lastF2lPairResult = r;
             return new ArrayList<>();
         }
 
@@ -636,33 +652,58 @@ public final class CfopSolver {
             return new F2lSearch(c, pairIdx, solvedPairs).search(14);
         }
         int kStar = canon[1];
-        List<String> moves = new ArrayList<>();
+        List<String> extractMoves = new ArrayList<>();
         Cube cc = c.copy();
         for (int k = 0; k < kStar; k++) {
             cc.apply("U");
-            moves.add("U");
+            extractMoves.add("U");
         }
 
-        // B2: Đưa 2 viên lên tầng 3 (tối đa 3 lần hất).
-        List<String> extractMoves = new ArrayList<>();
-        for (int attempt = 0; attempt < 3; attempt++) {
+        // B2: Đưa 2 viên lên tầng 3 — extract theo khe viên đang kẹt
+        // (không phải khe đích). Tối đa 6 lần hất.
+        for (int attempt = 0; attempt < 6; attempt++) {
             if (f2lBothInTop(cc, pairIdx)) break;
-            for (String m : F2L_EXTRACT[pairIdx]) {
+            int slot = findStuckSlot(cc, pairIdx);
+            if (slot < 0) break;
+            for (String m : F2L_EXTRACT[slot]) {
                 cc.apply(m);
                 extractMoves.add(m);
             }
         }
-        moves.addAll(extractMoves);
 
         // B3: Công thức chuẩn cho thế tầng trên.
+        // Thử trực tiếp từng công thức trong bảng 41 (dịch về khe thật, thử 4 xoay U)
+        // và kiểm chứng — công thức nào giải được thì đó là trường hợp của thế này.
+        // (Key lookup quá thô, hay khớp sai nên không dùng nữa.)
         List<String> alg = null;
         if (f2lBothInTop(cc, pairIdx)) {
-            int topKey = f2lTopKey(cc, pairIdx);
-            alg = F2L_TOP_TABLE.get(topKey);
-            if (alg != null) {
-                // Map được với 1 trong 41 công thức luyện tập
-                String caseId = F2L_CASE_MAP.get(topKey);
-                lastF2lCaseId = (caseId != null) ? caseId : "special";
+            // Duyệt bảng theo thứ tự key tăng dần để ổn định.
+            List<Integer> sortedKeys = new ArrayList<>(F2L_TOP_TABLE.keySet());
+            Collections.sort(sortedKeys);
+            outer:
+            for (int tableKey : sortedKeys) {
+                List<String> frAlg = F2L_TOP_TABLE.get(tableKey);
+                List<String> candAlg = translateMovesFromFR(frAlg, pairIdx);
+                for (int u = 0; u < 4; u++) {
+                    Cube probe = cc.copy();
+                    for (int k = 0; k < u; k++) probe.apply("U");
+                    probe.applySeq(candAlg);
+                    boolean ok = pairSolved(probe, pairIdx) && crossSolved(probe);
+                    for (int pi : solvedPairs) {
+                        if (!pairSolved(probe, pi)) { ok = false; break; }
+                    }
+                    if (ok) {
+                        // Ghi nhận: xoay U^u rồi áp công thức.
+                        for (int k = 0; k < u; k++) {
+                            cc.apply("U");
+                            extractMoves.add("U");
+                        }
+                        alg = candAlg;
+                        String caseId = F2L_CASE_MAP.get(tableKey);
+                        lastF2lCaseId = (caseId != null) ? caseId : "special";
+                        break outer;
+                    }
+                }
             }
             if (alg == null) {
                 // Chưa có trong bảng 41: giải live từ thế tầng trên (ổn định),
@@ -680,8 +721,10 @@ public final class CfopSolver {
                         for (String m : alg) {
                             if (m.startsWith("B")) { ok = false; break; }
                         }
-                        if (ok) {
-                            F2L_TOP_TABLE.put(topKey, new ArrayList<>(alg));
+                        if (ok && pairIdx == 0) {
+                            // Chỉ ghi khi ở khe FR. Key = direct key của state hiện tại.
+                            int recKey = f2lTopKey(cc, pairIdx);
+                            F2L_TOP_TABLE.put(recKey, new ArrayList<>(alg));
                         }
                     }
                 } catch (Exception e) {
@@ -692,26 +735,56 @@ public final class CfopSolver {
 
         if (alg != null) {
             cc.applySeq(alg);
-            moves.addAll(alg);
         } else {
             // Fallback: giải live từ đầu (không theo 3 bước, nhưng vẫn đúng).
-            return new F2lSearch(c, pairIdx, solvedPairs).search(14);
+            List<String> fb = new F2lSearch(c, pairIdx, solvedPairs).search(14);
+            lastF2lCaseId = "special";
+            F2lPairResult r = new F2lPairResult();
+            r.extractMoves = new ArrayList<>();
+            r.formulaMoves = new ArrayList<>(fb);
+            r.caseId = "special";
+            lastF2lPairResult = r;
+            return fb;
         }
 
-        // Gọn nước U dư.
-        moves = Cube.simplifyMoves(moves);
+        // Gọn từng bước riêng (không gộp qua ranh giới, để người học thấy rõ 2 bước).
+        extractMoves = Cube.simplifyMoves(extractMoves);
+        List<String> formulaMoves = Cube.simplifyMoves(new ArrayList<>(alg));
+
+        List<String> moves = new ArrayList<>();
+        moves.addAll(extractMoves);
+        moves.addAll(formulaMoves);
 
         // Kiểm chứng trên thế gốc.
         Cube check = c.copy();
         check.applySeq(moves);
         if (!pairSolved(check, pairIdx) || !crossSolved(check)) {
-            return new F2lSearch(c, pairIdx, solvedPairs).search(14);
+            List<String> fb = new F2lSearch(c, pairIdx, solvedPairs).search(14);
+            lastF2lCaseId = "special";
+            F2lPairResult r = new F2lPairResult();
+            r.extractMoves = new ArrayList<>();
+            r.formulaMoves = new ArrayList<>(fb);
+            r.caseId = "special";
+            lastF2lPairResult = r;
+            return fb;
         }
         for (int pi : solvedPairs) {
             if (!pairSolved(check, pi)) {
-                return new F2lSearch(c, pairIdx, solvedPairs).search(14);
+                List<String> fb = new F2lSearch(c, pairIdx, solvedPairs).search(14);
+                lastF2lCaseId = "special";
+                F2lPairResult r = new F2lPairResult();
+                r.extractMoves = new ArrayList<>();
+                r.formulaMoves = new ArrayList<>(fb);
+                r.caseId = "special";
+                lastF2lPairResult = r;
+                return fb;
             }
         }
+        F2lPairResult r = new F2lPairResult();
+        r.extractMoves = extractMoves;
+        r.formulaMoves = formulaMoves;
+        r.caseId = lastF2lCaseId;
+        lastF2lPairResult = r;
         return moves;
     }
 
@@ -733,6 +806,54 @@ public final class CfopSolver {
             {"R'", "U", "R"},
             {"L'", "U'", "L"},
     };
+
+    /**
+     * Tìm khe F2L (0=FR, 1=FL, 2=BR, 3=BL) của viên đang kẹt, để B2 hất đúng khe.
+     * Trả về -1 nếu cả 2 viên đã ở tầng trên (hoặc không xác định được).
+     * Góc kẹt ở tầng dưới (DFR/DLF/DBL/DRB) hoặc cạnh kẹt ở khe giữa/tầng dưới.
+     */
+    static int findStuckSlot(Cube c, int pairIdx) {
+        int[] facelets;
+        try {
+            facelets = f2lPairFacelets(c.s, pairIdx);
+        } catch (IllegalStateException e) {
+            return -1;
+        }
+        // Góc: facelets[0..2]. Tìm slot góc (CORNER_SLOTS).
+        int cornerSlot = -1;
+        for (int i = 0; i < CORNER_SLOTS.length; i++) {
+            int[] slot = CORNER_SLOTS[i];
+            // Kiểm tra 3 facelets có trùng với slot (không cần thứ tự).
+            boolean match = true;
+            for (int f : new int[]{facelets[0], facelets[1], facelets[2]}) {
+                boolean found = false;
+                for (int s : slot) if (s == f) { found = true; break; }
+                if (!found) { match = false; break; }
+            }
+            if (match) { cornerSlot = i; break; }
+        }
+        // Góc ở tầng dưới (slot 4-7): DFR=4->FR(0), DLF=5->FL(1), DBL=6->BL(3), DRB=7->BR(2).
+        if (cornerSlot >= 4) {
+            return cornerSlot == 4 ? 0 : cornerSlot == 5 ? 1 : cornerSlot == 6 ? 3 : 2;
+        }
+        // Cạnh: facelets[3..4]. Tìm slot cạnh (EDGE_SLOTS).
+        int edgeSlot = -1;
+        for (int i = 0; i < EDGE_SLOTS.length; i++) {
+            int[] slot = EDGE_SLOTS[i];
+            if ((slot[0] == facelets[3] && slot[1] == facelets[4])
+                    || (slot[0] == facelets[4] && slot[1] == facelets[3])) {
+                edgeSlot = i;
+                break;
+            }
+        }
+        // Cạnh kẹt ở khe giữa (8-11): FR=8->0, FL=9->1, BR=10->2, BL=11->3.
+        if (edgeSlot >= 8) return edgeSlot - 8;
+        // Cạnh ở tầng dưới (4-7): DR=4, DF=5, DL=6, DB=7 — dùng khe phía trên gần nhất.
+        if (edgeSlot >= 4) {
+            return edgeSlot == 4 ? 0 : edgeSlot == 5 ? 0 : edgeSlot == 6 ? 1 : 2;
+        }
+        return -1;
+    }
 
     /** Cả 2 viên (góc + cạnh) của cặp đã ở tầng trên chưa? */
     static boolean f2lBothInTop(Cube c, int pairIdx) {
@@ -771,61 +892,97 @@ public final class CfopSolver {
         F2L_TOP_TABLE.put(topKey, Arrays.asList(moves));
     }
 
+    // ------------------------------------------------------------ chuẩn hoá khe về FR
+    // Bảng F2L_TOP_TABLE chỉ có key cho khe FR (cặp 0). Để tra cho các cặp
+    // khác: xoay bản sao của khối để đưa khe về FR, tính key, tra bảng,
+    // rồi dịch công thức về khe thật. Phép xoay đưa khe về FR:
+    // cặp 0: không xoay | cặp 1 (FL): y' | cặp 2 (BR): y | cặp 3 (BL): y2.
+    private static final String[] SLOT_TO_FR = {"", "y'", "y", "y2"};
+
+    /** Dịch 1 nước từ khung FR về khung của cặp pairIdx (ngược phép xoay SLOT_TO_FR). */
+    static String translateMoveFromFR(String move, int pairIdx) {
+        if (pairIdx == 0 || move.isEmpty()) return move;
+        char face = move.charAt(0);
+        char suffix = move.length() > 1 ? move.charAt(1) : 0;
+        char newFace;
+        switch (pairIdx) {
+            case 1: // y': R->F, F->L, L->B, B->R
+                newFace = face == 'R' ? 'F' : face == 'F' ? 'L' : face == 'L' ? 'B' : face == 'B' ? 'R' : face;
+                break;
+            case 2: // y: R->B, F->R, L->F, B->L
+                newFace = face == 'R' ? 'B' : face == 'F' ? 'R' : face == 'L' ? 'F' : face == 'B' ? 'L' : face;
+                break;
+            default: // y2: R->L, L->R, F->B, B->F
+                newFace = face == 'R' ? 'L' : face == 'L' ? 'R' : face == 'F' ? 'B' : face == 'B' ? 'F' : face;
+                break;
+        }
+        return suffix == 0 ? String.valueOf(newFace) : "" + newFace + suffix;
+    }
+
+    /** Dịch cả dãy nước từ khung FR về khung của cặp pairIdx. */
+    static List<String> translateMovesFromFR(List<String> moves, int pairIdx) {
+        if (pairIdx == 0) return new ArrayList<>(moves);
+        List<String> out = new ArrayList<>();
+        for (String m : moves) out.add(translateMoveFromFR(m, pairIdx));
+        return out;
+    }
+
     /** Mapping topKey -> caseId (f2l-01..f2l-24) từ cuberesolver.com. */
     static final Map<Integer, String> F2L_CASE_MAP = new HashMap<>();
 
     static {
-        // 23 key duy nhất cho 24 case tầng trên (f2l-19 trùng key với f2l-02)
-        F2L_CASE_MAP.put(595, "f2l-01");
+        // 23 key DIRECT (không chuẩn hoá U) cho 23 case tầng trên.
+        // Key = f2lTopKey trực tiếp của setup state; công thức đã verify giải đúng từ state đó.
+        F2L_CASE_MAP.put(1085, "f2l-01");
         F2L_CASE_MAP.put(505, "f2l-02");
-        F2L_CASE_MAP.put(613, "f2l-03");
+        F2L_CASE_MAP.put(1117, "f2l-03");
         F2L_CASE_MAP.put(487, "f2l-04");
-        F2L_CASE_MAP.put(631, "f2l-05");
+        F2L_CASE_MAP.put(1126, "f2l-05");
         F2L_CASE_MAP.put(489, "f2l-06");
-        F2L_CASE_MAP.put(640, "f2l-07");
+        F2L_CASE_MAP.put(1090, "f2l-07");
         F2L_CASE_MAP.put(493, "f2l-08");
-        F2L_CASE_MAP.put(604, "f2l-09");
+        F2L_CASE_MAP.put(1099, "f2l-09");
         F2L_CASE_MAP.put(491, "f2l-10");
-        F2L_CASE_MAP.put(597, "f2l-11");
+        F2L_CASE_MAP.put(1081, "f2l-11");
         F2L_CASE_MAP.put(523, "f2l-12");
-        F2L_CASE_MAP.put(601, "f2l-13");
+        F2L_CASE_MAP.put(1083, "f2l-13");
         F2L_CASE_MAP.put(532, "f2l-14");
-        F2L_CASE_MAP.put(7, "f2l-15");
-        F2L_CASE_MAP.put(10, "f2l-16");
-        F2L_CASE_MAP.put(5, "f2l-17");
-        F2L_CASE_MAP.put(19, "f2l-18");
+        F2L_CASE_MAP.put(433, "f2l-15");
+        F2L_CASE_MAP.put(469, "f2l-16");
+        F2L_CASE_MAP.put(435, "f2l-17");
+        F2L_CASE_MAP.put(478, "f2l-18");
         F2L_CASE_MAP.put(496, "f2l-20");
-        F2L_CASE_MAP.put(3, "f2l-21");
-        F2L_CASE_MAP.put(46, "f2l-22");
-        F2L_CASE_MAP.put(1, "f2l-23");
-        F2L_CASE_MAP.put(37, "f2l-24");
+        F2L_CASE_MAP.put(437, "f2l-21");
+        F2L_CASE_MAP.put(451, "f2l-22");
+        F2L_CASE_MAP.put(439, "f2l-23");
+        F2L_CASE_MAP.put(442, "f2l-24");
     }
 
     static {
-        // 23 công thức tầng trên từ cuberesolver.com (đã verify, khung cố định)
-        f2lTopPut(595, "U", "R", "U'", "R'");
+        // 23 công thức tầng trên từ cuberesolver.com (đã verify, khung FR, key DIRECT)
+        f2lTopPut(1085, "U", "R", "U'", "R'");
         f2lTopPut(505, "U'", "F'", "U", "F");
-        f2lTopPut(613, "F'", "U'", "F");
+        f2lTopPut(1117, "F'", "U'", "F");
         f2lTopPut(487, "R", "U", "R'");
-        f2lTopPut(631, "U'", "R", "U'", "R'", "U", "F'", "U'", "F");
+        f2lTopPut(1126, "U'", "R", "U'", "R'", "U", "F'", "U'", "F");
         f2lTopPut(489, "U'", "R", "U", "R'", "U", "R", "U", "R'");
-        f2lTopPut(640, "U'", "R", "U2", "R'", "U", "F'", "U'", "F");
+        f2lTopPut(1090, "U'", "R", "U2", "R'", "U", "F'", "U'", "F");
         f2lTopPut(493, "R'", "U2", "R2", "U", "R2", "U", "R");
-        f2lTopPut(604, "U", "F'", "U", "F", "U'", "F'", "U'", "F");
+        f2lTopPut(1099, "U", "F'", "U", "F", "U'", "F'", "U'", "F");
         f2lTopPut(491, "U'", "R", "U'", "R'", "U", "R", "U", "R'");
-        f2lTopPut(597, "U'", "R", "U", "R'", "U2", "R", "U'", "R'");
+        f2lTopPut(1081, "U'", "R", "U", "R'", "U2", "R", "U'", "R'");
         f2lTopPut(523, "U", "F'", "U'", "F", "U2", "F'", "U", "F");
-        f2lTopPut(601, "U'", "R", "U2", "R'", "U2", "R", "U'", "R'");
+        f2lTopPut(1083, "U'", "R", "U2", "R'", "U2", "R", "U'", "R'");
         f2lTopPut(532, "U", "F'", "U2", "F", "U2", "F'", "U", "F");
-        f2lTopPut(7, "U", "R", "U2", "R'", "U", "R", "U'", "R'");
-        f2lTopPut(10, "U'", "F'", "U2", "F", "U'", "F'", "U", "F");
-        f2lTopPut(5, "U2", "R", "U", "R'", "U", "R", "U'", "R'");
-        f2lTopPut(19, "U2", "F'", "U'", "F", "U'", "F'", "U", "F");
+        f2lTopPut(433, "U", "R", "U2", "R'", "U", "R", "U'", "R'");
+        f2lTopPut(469, "U'", "F'", "U2", "F", "U'", "F'", "U", "F");
+        f2lTopPut(435, "U2", "R", "U", "R'", "U", "R", "U'", "R'");
+        f2lTopPut(478, "U2", "F'", "U'", "F", "U'", "F'", "U", "F");
         f2lTopPut(496, "R", "U'", "R'", "U2", "F'", "U'", "F");
-        f2lTopPut(3, "R", "U2", "R'", "U'", "R", "U", "R'");
-        f2lTopPut(46, "F'", "U2", "F", "U", "F'", "U'", "F");
-        f2lTopPut(1, "U", "R", "U'", "R'", "U'", "R", "U'", "R'", "U", "R", "U'", "R'");
-        f2lTopPut(37, "U'", "F'", "U", "F", "U", "F'", "U", "F", "U'", "F'", "U", "F");
+        f2lTopPut(437, "R", "U2", "R'", "U'", "R", "U", "R'");
+        f2lTopPut(451, "F'", "U2", "F", "U", "F'", "U'", "F");
+        f2lTopPut(439, "U", "R", "U'", "R'", "U'", "R", "U'", "R'", "U", "R", "U'", "R'");
+        f2lTopPut(442, "U'", "F'", "U", "F", "U", "F'", "U", "F", "U'", "F'", "U", "F");
     }
 
     /** Facelets in the top layer: U face + top rows of the side faces. */
@@ -1548,15 +1705,33 @@ public final class CfopSolver {
         // Thứ tự cặp CỐ ĐỊNH (0,1,2,3) để người học thuộc được: cùng một thế
         // luôn ra cùng một công thức. (Trước đây chọn cặp "dễ nhất" mỗi bước
         // nên công thức thay đổi liên tục, khó học.)
+        // Mỗi cặp tách thành 2 bước riêng để người học thấy rõ:
+        // Bước 1: đưa 2 viên lên tầng 3 — Bước 2: áp công thức của trường hợp đã nhận diện.
         for (int i = 0; i < 4; i++) {
             mv = f2lPairMoves(c, i, solvedPairs);
             c.applySeq(mv);
             solvedPairs.add(i);
+            F2lPairResult pr = lastF2lPairResult;
             String caseInfo = lastF2lCaseId.isEmpty() ? ""
                 : lastF2lCaseId.equals("special") ? " (Đặc biệt — không nằm trong 41 công thức)"
                 : " (Trường hợp " + lastF2lCaseId + ")";
-            stages.add(new Stage("f2l", "Cặp F2L " + (i + 1) + "/4: "
-                    + F2L_LABELS[i] + caseInfo, mv, i));
+            if (pr != null && (!pr.extractMoves.isEmpty() || !pr.formulaMoves.isEmpty())) {
+                // Bước 1: đưa viên lên tầng 3 (nếu có nước).
+                if (!pr.extractMoves.isEmpty()) {
+                    stages.add(new Stage("f2l", "Cặp F2L " + (i + 1) + "/4: "
+                            + F2L_LABELS[i] + " — Bước 1: Đưa 2 viên lên tầng 3",
+                            pr.extractMoves, i));
+                }
+                // Bước 2: công thức của trường hợp đã nhận diện.
+                if (!pr.formulaMoves.isEmpty()) {
+                    stages.add(new Stage("f2l", "Cặp F2L " + (i + 1) + "/4: "
+                            + F2L_LABELS[i] + " — Bước 2: Áp công thức" + caseInfo,
+                            pr.formulaMoves, i));
+                }
+            } else {
+                stages.add(new Stage("f2l", "Cặp F2L " + (i + 1) + "/4: "
+                        + F2L_LABELS[i] + caseInfo, mv, i));
+            }
         }
         if (!f2lSolved(c)) {
             throw new IllegalStateException("F2L did not solve");

@@ -185,7 +185,13 @@ fun SolveScreen(
     stages: List<CfopSolver.Stage>,
     onBack: () -> Unit,
     onNewCube: () -> Unit,
+    f2lOnly: Boolean = false,
 ) {
+    // Chế độ Học F2L: chỉ hiện các bước F2L (kèm chữ thập để bắt đầu), ẩn OLL/PLL.
+    val shownStages = remember(stages, f2lOnly) {
+        if (f2lOnly) stages.filter { it.key == "cross" || it.key == "f2l" } else stages
+    }
+    val stages = shownStages
     val flat = remember(stages) {
         val list = ArrayList<FlatMove>()
         stages.forEachIndexed { si, st ->
