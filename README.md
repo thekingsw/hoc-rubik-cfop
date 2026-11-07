@@ -19,7 +19,7 @@ App Android đơn giản giúp học giải Rubik 3×3 theo phương pháp **CFO
 | Bước | Nội dung |
 | --- | --- |
 | Chữ thập trắng | Đưa 4 cạnh trắng xuống mặt dưới |
-| Cặp F2L 1–4 | Ghép từng cặp góc + cạnh rồi đưa vào vị trí |
+| Cặp F2L 1–4 | Theo cách người chơi: chọn cặp dễ nhất → (nếu cần) hất viên kẹt lên → xoay U về 1 trong 41 case → làm công thức chuẩn của case đó |
 | OLL: định hướng cạnh | Lật cạnh tầng trên cho mặt trên thành một màu |
 | OLL: định hướng góc | Xoay góc tầng trên cho mặt trên thành một màu |
 | PLL: hoán vị góc | Đổi chỗ góc tầng trên về đúng vị trí |
@@ -56,3 +56,16 @@ kiểm tra từng bước: chữ thập ≤ 8 nước, F2L giữ nguyên chữ t
 ## Giấy phép
 
 Dùng cho mục đích cá nhân, học tập.
+
+## F2L theo 41 case (cách người chơi)
+
+- `solver/F2lCases.java` là **nguồn duy nhất** của 41 case (số thứ tự + công thức người chơi).
+  Thế mẫu, nhóm (24/6/6/5), mô tả cách nhận ra, khoá nhận diện đều được **tính** từ công thức.
+  Màn Luyện tập (`TrainingData.kt`) và bộ giải dùng chung bảng này.
+- `solver/F2lHuman.java` lập kế hoạch cho từng cặp: nhận diện case (xoay U tối đa 3 lần là khớp
+  đúng 1 trong 41 thế mẫu), nếu viên đang kẹt ở khe khác thì hất lên bằng `R U R'` rồi nhận diện lại.
+  Khe không ở trước-phải thì xoay cả khối (`y`) rồi xoay lại. Không có tìm kiếm của máy (IDA*),
+  không có nước B/D/d.
+- Mỗi bước F2L trong "Giải khối này" có `Stage.note`: số case /41, nhóm, cách nhận ra, công thức chuẩn.
+- Test: `java-test/F2lTest.java` (bảng 41 case phải đủ 41 khoá khác nhau, mỗi công thức giải đúng
+  thế mẫu, giải ngẫu nhiên không có lỗi, chỉ dùng U R L F y).

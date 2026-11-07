@@ -54,7 +54,7 @@ import vn.cfop.rubik.solver.CubeOrientation
 
 private val STAGE_TIPS = mapOf(
     "cross" to "Đưa 4 cạnh trắng xuống mặt dưới, khớp màu với tâm các mặt bên.",
-    "f2l" to "4 bước: đưa khe về trước-phải (xoay cả khối trên tay rồi bấm nút xoay) → hất viên kẹt lên tầng trên → xoay U về trường hợp chuẩn → làm R U R' hoặc F' U F theo ký hiệu mới.",
+    "f2l" to "Mỗi cặp: chọn cặp dễ nhất → (nếu cần) hất viên kẹt lên tầng trên → xoay U cho khớp 1 trong 41 case → làm công thức của case đó. Khe không ở trước-phải thì xoay cả khối (y) rồi xoay lại.",
     "oll_eo" to "Lật các cạnh tầng trên để mặt trên thành một màu.",
     "oll_co" to "Xoay các góc tầng trên để mặt trên thành một màu.",
     "pll_c" to "Đổi chỗ các góc tầng trên về đúng vị trí.",
@@ -249,9 +249,7 @@ fun SolveScreen(
             val startState = stateAt(stageStarts[si])
             when (st.key) {
                 "cross" -> STAGE_TIPS["cross"] ?: ""
-                "f2l" -> {
-                    describeF2LSteps(startState, st.pairIndex, st.moves)
-                }
+                "f2l" -> st.note
                 "oll_eo" -> {
                     if (isJustUTurns(st.moves)) {
                         "Chỉ cần xoay mặt trên cho khớp, không cần công thức."
