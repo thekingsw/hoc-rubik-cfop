@@ -72,7 +72,30 @@ public class F2lTest {
             }
             c.applySeq(mv);
             List<CfopSolver.Stage> stages = CfopSolver.solve(c);
+            Cube replay = c.copy();
             for (CfopSolver.Stage s : stages) {
+                replay.applySeq(s.moves);
+                if (s.key.startsWith("oll") || s.key.startsWith("pll")) {
+                    // Tầng cuối: có giải thích, không có nước máy tìm, chỉ nước người chơi dùng.
+                    check(s.note != null && !s.note.isEmpty(), "bước " + s.key + " phải có lời giải thích");
+                    for (String m : s.moves) {
+                        char b = m.charAt(0);
+                        check("URFLDMxy".indexOf(b) >= 0, "tầng cuối: nước lạ " + m);
+                    }
+                    // Lời hướng dẫn "xoay U cho đúng thế" của OLL cạnh phải đúng với thực tế.
+                    if (s.key.equals("oll_eo") && s.title.contains("Xoay U cho đúng thế")) {
+                        Set<Integer> o = new TreeSet<>();
+                        for (int e : new int[]{1, 3, 5, 7}) {
+                            if (replay.s[e] == 3) {
+                                o.add(e);
+                            }
+                        }
+                        Set<Integer> want = s.title.contains("Đường thẳng")
+                                ? new TreeSet<>(Arrays.asList(3, 5))   // đường nằm ngang (trái-phải)
+                                : new TreeSet<>(Arrays.asList(1, 3));  // chữ L ở góc sau-trái
+                        check(o.equals(want), "OLL cạnh: sau khi xoay U phải đúng thế " + want + " nhưng là " + o);
+                    }
+                }
                 if (!s.key.equals("f2l")) {
                     continue;
                 }
@@ -88,6 +111,7 @@ public class F2lTest {
                     hit.add(Integer.parseInt(s.title.substring(i + 15, s.title.indexOf("/41"))));
                 }
             }
+            check(replay.isSolved(), "khối phải được giải xong sau khi chạy hết các bước");
         }
         System.out.println("giải " + n + " khối, số case gặp: " + hit.size() + "/41");
         if (n >= 300) {

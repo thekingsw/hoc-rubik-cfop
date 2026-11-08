@@ -69,3 +69,20 @@ Dùng cho mục đích cá nhân, học tập.
 - Mỗi bước F2L trong "Giải khối này" có `Stage.note`: số case /41, nhóm, cách nhận ra, công thức chuẩn.
 - Test: `java-test/F2lTest.java` (bảng 41 case phải đủ 41 khoá khác nhau, mỗi công thức giải đúng
   thế mẫu, giải ngẫu nhiên không có lỗi, chỉ dùng U R L F y).
+
+## Tầng cuối (OLL/PLL 2-look) theo cách người chơi
+
+- `solver/LastLayerHuman.java`: OLL cạnh (Chấm / Chữ L / Đường thẳng), OLL góc (Sune, Anti-Sune, H, Pi, U;
+  T/L làm Sune một lần rồi nhìn lại), PLL góc (Aa, Ab, Y), PLL cạnh (Ua, Ub, H, Z).
+- Mỗi look tách thành các bước như người chơi: **xoay U cho đúng thế** → **công thức có tên** (kèm cách nhận ra:
+  số góc vàng hướng lên, "đèn pha", cạnh đã đúng...) → **xoay U cuối (AUF)**. Hướng dẫn xoay U (ví dụ "cho đường vàng nằm
+  ngang") được test đối chiếu với trạng thái thật.
+
+## Màn Giải
+
+- Một màn hình, không cuộn cả trang: khối 3D chiếm phần giữa, bước hiện tại (chip nước đi) ngay dưới, hàng nút
+  Lùi / Bước tiếp / Tự chạy luôn sát đáy.
+- Lời giải thích dài mở bằng nút "💡 Giải thích"; xem toàn bộ lộ trình bằng "📋 Tất cả bước".
+- Đã bỏ các nút xoay cả khối ("Trái ra trước", "Sau ra trước"...): xoay cả khối là các nước `y`, `y'`, `y2` nằm ngay trong
+  công thức. Ký hiệu luôn theo hướng cầm chuẩn (xanh lá ở trước, vàng ở trên).
+

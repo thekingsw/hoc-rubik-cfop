@@ -1,11 +1,13 @@
 package vn.cfop.rubik.ui
 
-import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -14,11 +16,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -28,38 +29,28 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import vn.cfop.rubik.solver.CfopSolver
 import vn.cfop.rubik.solver.Cube
-import vn.cfop.rubik.solver.CubeOrientation
 
-private val STAGE_TIPS = mapOf(
-    "cross" to "Đưa 4 cạnh trắng xuống mặt dưới, khớp màu với tâm các mặt bên.",
-    "f2l" to "Mỗi cặp: chọn cặp dễ nhất → (nếu cần) hất viên kẹt lên tầng trên → xoay U cho khớp 1 trong 41 case → làm công thức của case đó. Khe không ở trước-phải thì xoay cả khối (y) rồi xoay lại.",
-    "oll_eo" to "Lật các cạnh tầng trên để mặt trên thành một màu.",
-    "oll_co" to "Xoay các góc tầng trên để mặt trên thành một màu.",
-    "pll_c" to "Đổi chỗ các góc tầng trên về đúng vị trí.",
-    "pll_e" to "Đổi chỗ các cạnh tầng trên về đúng vị trí. Xong!",
-)
+// Lời giải thích của mọi bước (trừ chữ thập) do bộ giải tạo sẵn trong Stage.note:
+// tên case, cách nhận ra, công thức. Chữ thập dùng lời gợi ý chung dưới đây.
+private const val CROSS_TIP = "Đưa 4 cạnh trắng xuống mặt dưới, khớp màu với tâm các mặt bên."
 
 /** Flat move list with stage boundaries. */
 private data class FlatMove(val stageIndex: Int, val move: String)
@@ -135,7 +126,6 @@ private fun MoveChips(
     stage: CfopSolver.Stage,
     start: Int,
     current: Int,
-    dispMove: (String) -> String,
     onJumpToMove: (Int) -> Unit,
 ) {
     FlowRow(
@@ -147,7 +137,6 @@ private fun MoveChips(
             val globalIdx = start + mi
             val isNext = globalIdx == current
             val isDoneMove = globalIdx < current
-            val disp = dispMove(mv)
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(6.dp))
@@ -164,12 +153,12 @@ private fun MoveChips(
                         RoundedCornerShape(6.dp),
                     )
                     .clickable { onJumpToMove(globalIdx) }
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                    .padding(horizontal = 9.dp, vertical = 5.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    disp,
-                    fontSize = 15.sp,
+                    mv,
+                    fontSize = 16.sp,
                     fontWeight = if (isNext) FontWeight.Bold else FontWeight.Normal,
                     color = if (isNext) Color.White else Color.Black,
                 )
@@ -178,7 +167,15 @@ private fun MoveChips(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
+/**
+ * Màn Giải từng bước. Bố cục một màn hình, KHÔNG cuộn cả trang:
+ *   đầu (tiêu đề + tiến độ) → khối 3D (chiếm phần còn lại) → bước hiện tại
+ *   (nước đi dạng chip, gọn) → hàng nút điều khiển luôn nằm sát đáy.
+ * Lời giải thích dài mở bằng nút "Giải thích" (hộp thoại) nên không che nút.
+ * Các nước xoay cả khối (y, y', y2) nằm ngay trong công thức, không còn nút
+ * xoay riêng; ký hiệu luôn theo hướng cầm chuẩn (xanh lá ở trước, vàng ở trên).
+ */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SolveScreen(
     initialState: IntArray,
@@ -213,95 +210,22 @@ fun SolveScreen(
     var autoPlay by remember { mutableStateOf(false) }
     val total = flat.size
 
-    // Các bước (stage) dàn hàng ngang: pager tự chạy theo bước hiện tại,
-    // lúc nào bước hiện tại cũng nằm ngay dưới khối rubik.
     var showAllSteps by remember { mutableStateOf(false) }
-    val pagerState = rememberPagerState(pageCount = { stages.size })
-    // Về trang đầu khi đổi sang khối mới.
-    LaunchedEffect(stages) {
-        pagerState.scrollToPage(0)
-    }
+    var showNote by remember { mutableStateOf(false) }
 
-    // Xoay cả khối trên tay: app theo dõi hướng cầm (viewRot) và tự dịch
-    // mọi nước còn lại sang ký hiệu mới — B thật sự thành F/R/L theo hướng
-    // anh đang cầm. (Góp ý của anh 2026-10-31: "xoay khối thì công thức
-    // phải đổi theo".)
-    var viewRot by remember { mutableStateOf(CubeOrientation.identity()) }
-    var rotating by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
-    fun dispMove(m: String): String = CubeOrientation.translateForView(m, viewRot)
-
-    // Facelet state after the first k moves, shown in the current view
-    // orientation (rotated if the user turned the cube).
+    // Facelet state after the first k moves.
     fun stateAt(k: Int): IntArray {
         val cube = Cube(initialState)
         for (i in 0 until k) {
             cube.apply(flat[i].move)
         }
-        return CubeOrientation.applyView(cube.s, viewRot)
+        return cube.s
     }
 
-    // --- Case explanations: which training case each stage is, in plain
-    // language, so the user can connect the solver's moves to practice.
-    // Computed once from the state at each stage's start.
-    val stageExplanations = remember(stages, initialState) {
-        stages.mapIndexed { si, st ->
-            val startState = stateAt(stageStarts[si])
-            when (st.key) {
-                "cross" -> STAGE_TIPS["cross"] ?: ""
-                "f2l" -> st.note
-                "oll_eo" -> {
-                    if (isJustUTurns(st.moves)) {
-                        "Chỉ cần xoay mặt trên cho khớp, không cần công thức."
-                    } else {
-                        val pattern = ollEoPatternName(startState)
-                        if (pattern != null) {
-                            "Trường hợp “$pattern” trong phần Luyện tập → OLL (lật cạnh). Công thức dưới đây sẽ đưa tất cả cạnh về màu vàng."
-                        } else {
-                            STAGE_TIPS["oll_eo"] ?: ""
-                        }
-                    }
-                }
-                "oll_co" -> {
-                    if (isJustUTurns(st.moves)) {
-                        "Chỉ cần xoay mặt trên cho khớp, không cần công thức."
-                    } else {
-                        val co = ollCoCase(st.moves)
-                        if (co != null) {
-                            "Trường hợp “${co.name}” trong phần Luyện tập → OLL (xoay góc). ${co.recognition}"
-                        } else if (isCoSuneFallback(st.moves)) {
-                            "Trường hợp T/L (không nằm trong 5 công thức góc) — làm Sune 1 lần rồi nhìn lại, sẽ ra 1 trong 5 hình kia."
-                        } else {
-                            STAGE_TIPS["oll_co"] ?: ""
-                        }
-                    }
-                }
-                "pll_c" -> {
-                    if (isJustUTurns(st.moves)) {
-                        "Chỉ cần xoay mặt trên cho khớp, không cần công thức."
-                    } else {
-                        val pc = pllCase(st.moves, corners = true)
-                        if (pc != null) {
-                            "Trường hợp “${pc.name}” trong phần Luyện tập → PLL (đổi góc). ${pc.recognition}"
-                        } else {
-                            STAGE_TIPS["pll_c"] ?: ""
-                        }
-                    }
-                }
-                "pll_e" -> {
-                    if (isJustUTurns(st.moves)) {
-                        "Chỉ cần xoay mặt trên cho khớp, không cần công thức."
-                    } else {
-                        val pe = pllCase(st.moves, corners = false)
-                        if (pe != null) {
-                            "Trường hợp “${pe.name}” trong phần Luyện tập → PLL (đổi cạnh). ${pe.recognition}"
-                        } else {
-                            STAGE_TIPS["pll_e"] ?: ""
-                        }
-                    }
-                }
-                else -> STAGE_TIPS[st.key] ?: ""
-            }
+    // Lời giải thích từng bước: do bộ giải tạo sẵn (Stage.note).
+    val stageExplanations = remember(stages) {
+        stages.map { st ->
+            if (st.note.isNotEmpty()) st.note else if (st.key == "cross") CROSS_TIP else ""
         }
     }
 
@@ -313,31 +237,13 @@ fun SolveScreen(
     val animProgress = remember { Animatable(0f) }
     var lastCurrent by remember { mutableIntStateOf(0) }
 
-    /** Xoay cả khối trên tay rồi bấm nút — khối 3D xoay theo, các nước còn
-     *  lại tự đổi ký hiệu theo hướng cầm mới (B thành F/R/L thật). */
-    fun onRotate(rot: String) {
-        if (rotating) return
-        scope.launch {
-            rotating = true
-            autoPlay = false
-            baseState = stateAt(current)
-            animMove = rot
-            animProgress.snapTo(0f)
-            animProgress.animateTo(1f, tween(450))
-            animMove = null
-            viewRot = CubeOrientation.composeView(viewRot, rot)
-            baseState = stateAt(current)
-            rotating = false
-        }
-    }
-
     LaunchedEffect(current) {
         val delta = current - lastCurrent
         lastCurrent = current
         when (delta) {
             1 -> {
-                // One step forward: animate the move just applied (in display notation).
-                val mv = dispMove(flat[current - 1].move)
+                // One step forward: animate the move just applied.
+                val mv = flat[current - 1].move
                 baseState = stateAt(current - 1)
                 animMove = mv
                 animProgress.snapTo(0f)
@@ -347,7 +253,7 @@ fun SolveScreen(
             }
             -1 -> {
                 // One step back: animate the inverse of the move undone.
-                val mv = dispMove(flat[current].move)
+                val mv = flat[current].move
                 baseState = stateAt(current + 1)
                 animMove = invertMove(mv)
                 animProgress.snapTo(0f)
@@ -366,11 +272,7 @@ fun SolveScreen(
 
     val done = current >= total
     val currentStageIndex = if (done) stages.size - 1 else flat[current].stageIndex
-
-    // Pager tự đi ngang theo bước hiện tại (từ trái sang phải).
-    LaunchedEffect(currentStageIndex) {
-        pagerState.animateScrollToPage(currentStageIndex)
-    }
+    val stage = stages.getOrNull(currentStageIndex)
 
     // Highlight what still needs fixing in the current stage, so the user
     // learns to recognise each pattern. The pieces move as the solve
@@ -378,14 +280,13 @@ fun SolveScreen(
     // F2L: the pair's corner + edge. OLL: pieces not oriented yet.
     // PLL: pieces not in their solved position yet.
     val highlightFacelets: Set<Int> = remember(baseState, currentStageIndex, done) {
-        if (done) {
+        if (done || stage == null) {
             emptySet()
         } else {
-            val st = stages[currentStageIndex]
             try {
-                when (st.key) {
-                    "f2l" -> if (st.pairIndex >= 0) {
-                        CfopSolver.f2lPairFacelets(baseState, st.pairIndex).toSet()
+                when (stage.key) {
+                    "f2l" -> if (stage.pairIndex >= 0) {
+                        CfopSolver.f2lPairFacelets(baseState, stage.pairIndex).toSet()
                     } else {
                         emptySet()
                     }
@@ -401,14 +302,14 @@ fun SolveScreen(
         }
     }
 
-    // Stage-specific hint for the highlight.
-    val highlightHint: String? = if (done || highlightFacelets.isEmpty()) {
+    // Stage-specific hint for the highlight (hiện trong hộp thoại "Giải thích").
+    val highlightHint: String? = if (done || stage == null || highlightFacelets.isEmpty()) {
         null
     } else {
-        when (stages[currentStageIndex].key) {
-            "f2l" -> "👀 2 viên cần ghép đang nhấp nháy vàng — tìm chúng trên khối rồi làm theo các nước dưới đây."
-            "oll_eo" -> "👀 Các cạnh chưa lật đúng đang nhấp nháy — nhìn hình chúng tạo thành để nhận biết trường hợp (thẳng / chữ L / chấm)."
-            "oll_co" -> "👀 Các góc chưa xoay đúng đang nhấp nháy — nhìn vị trí chúng để nhận biết trường hợp."
+        when (stage.key) {
+            "f2l" -> "👀 2 viên cần ghép đang nhấp nháy vàng trên khối 3D."
+            "oll_eo" -> "👀 Các cạnh chưa lật đúng đang nhấp nháy — nhìn hình chúng tạo thành (chấm / chữ L / đường thẳng)."
+            "oll_co" -> "👀 Các góc chưa xoay đúng đang nhấp nháy — nhìn vị trí chúng để nhận ra trường hợp."
             "pll_c" -> "👀 Các góc chưa về đúng chỗ đang nhấp nháy — chúng sẽ đổi chỗ cho nhau."
             "pll_e" -> "👀 Các cạnh chưa về đúng chỗ đang nhấp nháy — chúng sẽ đổi chỗ cho nhau."
             else -> null
@@ -427,128 +328,121 @@ fun SolveScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
+            .padding(horizontal = 12.dp, vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(
-            if (done) "Xong! Khối đã được giải 🎉" else "Hướng dẫn từng bước — CFOP",
-            fontSize = 22.sp,
-            fontWeight = FontWeight.Bold,
-        )
-        Spacer(Modifier.height(8.dp))
-        LinearProgressIndicator(
-            progress = { if (total == 0) 1f else current.toFloat() / total },
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Text(
-            "Bước $current / $total",
-            fontSize = 13.sp,
-            color = Color.Gray,
-            modifier = Modifier.padding(top = 4.dp),
-        )
-        Spacer(Modifier.height(12.dp))
-
-        Cube3DView(
-            state = baseState,
-            animMove = animMove,
-            animProgress = animProgress.value,
-            highlight = highlightFacelets,
-        )
-        if (highlightHint != null) {
-            Text(
-                highlightHint,
-                fontSize = 13.sp,
-                color = Color(0xFFE65100),
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(top = 4.dp),
-            )
-        }
-        Text(
-            "Kéo để xoay góc nhìn (chỉ xem, không đổi ký hiệu)",
-            fontSize = 12.sp,
-            color = Color.Gray,
-            modifier = Modifier.padding(top = 4.dp),
-        )
-        Spacer(Modifier.height(8.dp))
-
-        // === Bước hiện tại luôn nằm ngay dưới khối rubik ===
-        // Các bước dàn hàng ngang: pager tự đi từ trái sang phải theo tiến trình.
-        // Vuốt ngang để ngó bước khác; bấm "Bước tiếp" là pager tự về bước hiện tại.
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.fillMaxWidth(),
-            key = { it },
-        ) { page ->
-            StageCard(
-                stage = stages[page],
-                isCurrent = page == currentStageIndex && !done,
-                isPast = page < currentStageIndex || done,
-                explanation = stageExplanations[page],
-            ) {
-                MoveChips(
-                    stage = stages[page],
-                    start = stageStarts[page],
-                    current = current,
-                    dispMove = ::dispMove,
-                    onJumpToMove = { idx ->
-                        autoPlay = false
-                        current = idx
-                    },
-                )
-            }
-        }
+        // --- Đầu: tiêu đề + tiến độ (gọn, 1 dòng + thanh) ---
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 2.dp),
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                "Bước ${currentStageIndex + 1}/${stages.size}",
-                fontSize = 13.sp,
-                color = Color.Gray,
+                if (done) "Xong! Khối đã giải 🎉" else "Giải từng bước — CFOP",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
             )
-            TextButton(onClick = { showAllSteps = true }) {
-                Text("📋 Xem tất cả bước", fontSize = 14.sp)
+            Text("$current / $total nước", fontSize = 13.sp, color = Color.Gray)
+        }
+        LinearProgressIndicator(
+            progress = { if (total == 0) 1f else current.toFloat() / total },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 4.dp),
+        )
+
+        // --- Khối 3D chiếm toàn bộ chỗ còn lại, luôn là hình vuông vừa khít ---
+        BoxWithConstraints(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth(),
+            contentAlignment = Alignment.Center,
+        ) {
+            val side = if (maxWidth < maxHeight) maxWidth else maxHeight
+            Cube3DView(
+                state = baseState,
+                animMove = animMove,
+                animProgress = animProgress.value,
+                modifier = Modifier.size(side),
+                highlight = highlightFacelets,
+            )
+        }
+
+        // --- Bước hiện tại: tiêu đề + chip nước đi + 2 nút nhỏ ---
+        if (stage != null) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(if (done) Color(0xFFF1F8E9) else Color(0xFFE3F2FD))
+                    .border(
+                        1.dp,
+                        if (done) Color(0xFF9CCC65) else Color(0xFF1976D2),
+                        RoundedCornerShape(12.dp),
+                    )
+                    .padding(horizontal = 10.dp, vertical = 6.dp),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        stage.title,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "${currentStageIndex + 1}/${stages.size}",
+                        fontSize = 12.sp,
+                        color = Color.Gray,
+                    )
+                }
+                Spacer(Modifier.height(6.dp))
+                Column(
+                    modifier = Modifier
+                        .heightIn(max = 104.dp)
+                        .verticalScroll(rememberScrollState()),
+                ) {
+                    MoveChips(
+                        stage = stage,
+                        start = stageStarts[currentStageIndex],
+                        current = current,
+                        onJumpToMove = { idx ->
+                            autoPlay = false
+                            current = idx
+                        },
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    TextButton(onClick = { showNote = true }) {
+                        Text("💡 Giải thích", fontSize = 14.sp)
+                    }
+                    TextButton(onClick = { showAllSteps = true }) {
+                        Text("📋 Tất cả bước", fontSize = 14.sp)
+                    }
+                }
             }
         }
-        Spacer(Modifier.height(8.dp))
 
-        // Xoay cả khối trên tay rồi bấm nút tương ứng — ký hiệu các nước
-        // còn lại tự đổi theo hướng cầm mới.
-        Text(
-            "Xoay khối trên tay rồi bấm:",
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color(0xFF1565C0),
-        )
-        Spacer(Modifier.height(4.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(
-                onClick = { onRotate("y'") },
-                enabled = !rotating && !done,
-            ) { Text("◀ Trái ra trước", fontSize = 13.sp) }
-            OutlinedButton(
-                onClick = { onRotate("y2") },
-                enabled = !rotating && !done,
-            ) { Text("Sau ra trước", fontSize = 13.sp) }
-            OutlinedButton(
-                onClick = { onRotate("y") },
-                enabled = !rotating && !done,
-            ) { Text("Phải ra trước ▶", fontSize = 13.sp) }
-        }
-        Spacer(Modifier.height(16.dp))
-
-        // Controls
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        // --- Nút điều khiển: luôn nằm sát đáy, không bao giờ bị che ---
+        Spacer(Modifier.height(6.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             OutlinedButton(
                 onClick = {
                     autoPlay = false
                     if (current > 0) current--
                 },
                 enabled = current > 0,
+                modifier = Modifier.height(52.dp),
             ) { Text("◀ Lùi") }
             Button(
                 onClick = {
@@ -558,50 +452,67 @@ fun SolveScreen(
                     }
                 },
                 enabled = current < total,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .height(52.dp),
             ) {
-                Text(if (current == 0) "Bắt đầu ▶" else "Bước tiếp ▶", fontSize = 15.sp)
+                Text(if (current == 0) "Bắt đầu ▶" else "Bước tiếp ▶", fontSize = 16.sp)
             }
             OutlinedButton(
                 onClick = { autoPlay = !autoPlay },
                 enabled = current < total,
+                modifier = Modifier.height(52.dp),
             ) { Text(if (autoPlay) "⏸ Dừng" else "▶ Tự chạy") }
         }
-        Spacer(Modifier.height(16.dp))
-
-        if (done) {
-            Spacer(Modifier.height(8.dp))
-            Text(
-                "Chúc mừng anh! Hãy xáo lại khối và giải tiếp để nhớ công thức nhé.",
-                fontSize = 14.sp,
-                color = Color(0xFF388E3C),
-                fontWeight = FontWeight.Bold,
-            )
-            Spacer(Modifier.height(12.dp))
-        }
-
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = onBack) { Text("← Sửa khối") }
-            OutlinedButton(onClick = {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            TextButton(onClick = onBack) { Text("← Sửa khối", fontSize = 13.sp) }
+            TextButton(onClick = {
                 autoPlay = false
                 current = 0
-            }) { Text("↺ Chơi lại từ đầu") }
-            Button(onClick = onNewCube) { Text("Khối mới") }
+            }) { Text("↺ Từ đầu", fontSize = 13.sp) }
+            TextButton(onClick = onNewCube) { Text("Khối mới", fontSize = 13.sp) }
         }
-        Spacer(Modifier.height(16.dp))
-        Text(
-            "Ký hiệu luôn theo hướng anh đang cầm khối: R là mặt bên phải, L trái, U trên, " +
-                "D dưới, F trước mặt, B sau lưng — không theo màu cố định. " +
-                "M là lớp giữa (xoay như L). " +
-                "Nếu anh xoay cả khối trên tay, bấm nút xoay tương ứng ở trên: " +
-                "khối 3D xoay theo và mọi nước còn lại tự đổi ký hiệu cho khớp. " +
-                "Không dấu = theo chiều kim đồng hồ, ' = ngược chiều, 2 = xoay 180°.",
-            fontSize = 12.sp,
-            color = Color.Gray,
+    }
+
+    // Hộp thoại giải thích bước hiện tại (dài thì cuộn trong hộp thoại).
+    if (showNote && stage != null) {
+        AlertDialog(
+            onDismissRequest = { showNote = false },
+            title = { Text(stage.title, fontSize = 16.sp, fontWeight = FontWeight.Bold) },
+            text = {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    Text(stageExplanations[currentStageIndex], fontSize = 14.sp)
+                    if (highlightHint != null) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            highlightHint,
+                            fontSize = 13.sp,
+                            color = Color(0xFFE65100),
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "Ký hiệu theo hướng cầm chuẩn: xanh lá ở trước, vàng ở trên. " +
+                            "R phải, L trái, U trên, D dưới, F trước, B sau; M là lớp giữa. " +
+                            "y / y' / y2 là xoay CẢ khối (không phải xoay một mặt). " +
+                            "Không dấu = chiều kim đồng hồ, ' = ngược chiều, 2 = 180°. " +
+                            "Kéo trên khối 3D để đổi góc nhìn (chỉ để xem).",
+                        fontSize = 12.sp,
+                        color = Color.Gray,
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showNote = false }) { Text("Đóng") }
+            },
         )
     }
 
-    // Dialog xem tất cả bước dạng dọc (như trước đây).
+    // Dialog xem tất cả bước dạng dọc.
     if (showAllSteps) {
         AlertDialog(
             onDismissRequest = { showAllSteps = false },
@@ -610,18 +521,17 @@ fun SolveScreen(
                 Column(
                     modifier = Modifier.verticalScroll(rememberScrollState()),
                 ) {
-                    stages.forEachIndexed { si, stage ->
+                    stages.forEachIndexed { si, st ->
                         StageCard(
-                            stage = stage,
+                            stage = st,
                             isCurrent = si == currentStageIndex && !done,
                             isPast = si < currentStageIndex || done,
                             explanation = stageExplanations[si],
                         ) {
                             MoveChips(
-                                stage = stage,
+                                stage = st,
                                 start = stageStarts[si],
                                 current = current,
-                                dispMove = ::dispMove,
                                 onJumpToMove = { idx ->
                                     autoPlay = false
                                     current = idx
