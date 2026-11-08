@@ -36,6 +36,7 @@ import vn.cfop.rubik.ui.InputScreen
 import vn.cfop.rubik.ui.SettingsScreen
 import vn.cfop.rubik.ui.SolveScreen
 import vn.cfop.rubik.ui.TestScreen
+import vn.cfop.rubik.ui.FlashcardScreen
 import vn.cfop.rubik.ui.TrainingScreen
 import vn.cfop.rubik.ui.blankState
 import vn.cfop.rubik.ui.checkForUpdate
@@ -45,7 +46,7 @@ import vn.cfop.rubik.ui.isAutoCheckEnabled
 import vn.cfop.rubik.ui.saveLastKnownSha
 import vn.cfop.rubik.ui.UpdateInfo
 
-private enum class Screen { HOME, INPUT, SOLVE, TRAINING, TEST, SETTINGS, DOWNLOAD }
+private enum class Screen { HOME, INPUT, SOLVE, TRAINING, TEST, FLASHCARD, SETTINGS, DOWNLOAD }
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -193,7 +194,11 @@ class MainActivity : ComponentActivity() {
                         TrainingScreen(
                             onBack = { screen = Screen.HOME },
                             onTest = { screen = Screen.TEST },
+                            onFlashcards = { screen = Screen.FLASHCARD },
                         )
+                    }
+                    Screen.FLASHCARD -> {
+                        FlashcardScreen(onBack = { screen = Screen.TRAINING })
                     }
                     Screen.TEST -> {
                         TestScreen(onBack = { screen = Screen.TRAINING })

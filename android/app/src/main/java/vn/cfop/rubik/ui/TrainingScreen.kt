@@ -68,7 +68,7 @@ private fun MoveChip(move: String, highlighted: Boolean = false) {
 }
 
 @Composable
-fun TrainingScreen(onBack: () -> Unit, onTest: () -> Unit) {
+fun TrainingScreen(onBack: () -> Unit, onTest: () -> Unit, onFlashcards: () -> Unit) {
     val context = LocalContext.current
     val prefs = remember {
         context.getSharedPreferences("training", android.content.Context.MODE_PRIVATE)
@@ -136,6 +136,11 @@ fun TrainingScreen(onBack: () -> Unit, onTest: () -> Unit) {
             "Mỗi trường hợp chỉ có 1 công thức cố định. Nhận ra hình là biết phải làm gì.",
             fontSize = 13.sp, color = Color.Gray,
         )
+        Spacer(Modifier.height(8.dp))
+        Button(
+            onClick = onFlashcards,
+            modifier = Modifier.fillMaxWidth(),
+        ) { Text("🃏 Thẻ nhớ F2L — luyện nhớ, có lịch ôn") }
         Spacer(Modifier.height(12.dp))
 
         // Level selector

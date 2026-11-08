@@ -86,3 +86,15 @@ Dùng cho mục đích cá nhân, học tập.
 - Đã bỏ các nút xoay cả khối ("Trái ra trước", "Sau ra trước"...): xoay cả khối là các nước `y`, `y'`, `y2` nằm ngay trong
   công thức. Ký hiệu luôn theo hướng cầm chuẩn (xanh lá ở trước, vàng ở trên).
 
+## Thẻ nhớ F2L (luyện có lịch ôn)
+
+- Màn: Luyện tập → "🃏 Thẻ nhớ F2L" (`ui/FlashcardScreen.kt`). Nhìn hình (chỉ hiện 2 viên của cặp) → nhớ công thức →
+  làm thử trên khối thật → tự chấm **Quên / Chậm / Nhớ ngay**. Xem công thức trước khi chấm thì không được chấm "Nhớ ngay".
+- Mỗi thẻ đặt case ở khe ngẫu nhiên (trước-phải/trước-trái/sau-phải/sau-trái) và độ xoay U ngẫu nhiên, để không học vẹt
+  một hướng (`solver/F2lPractice.java`). Nút "Tạo trên khối thật" cho đúng các nước xáo từ khối đã giải.
+- Lịch ôn kiểu hộp Leitner (`ui/Srs.kt`): Nhớ ngay → hộp +1 (ôn sau 1/3/7/14/30 ngày); Chậm → 10 phút; Quên → hộp 0, 1 phút.
+  Dữ liệu lưu trên máy (`ui/StudyStore.kt`, SharedPreferences "cfop_study").
+- Bản đồ 41 ô tô màu theo mức thuộc; chạm số để thêm/bỏ case khỏi bộ đang học; "＋ Thêm 3 case tiếp theo".
+- Test: `java-test/PracticeTest.java` (41 case x 4 khe x 4 độ xoay U = 656 thẻ, thẻ nào cũng nhận đúng case và giải xong khối)
+  và `java-test/SrsCheck.kt` (lịch ôn + lưu/đọc; chạy bằng kotlinc: `kotlinc ui/Srs.kt java-test/SrsCheck.kt`).
+
