@@ -64,7 +64,17 @@ final class LastLayerHuman {
     private static final Look UA = new Look("Ua", "R U' R U R U R U' R' U' R2", null);
     private static final Look UB = new Look("Ub", "R2 U R U R' U' R' U' R' U R'", null);
     private static final Look PH = new Look("H", "M2 U M2 U2 M2 U M2", null);
-    private static final Look PZ = new Look("Z", "M2 U M2 U M' U2 M2 U2 M'", null);
+    private static final Look PZ = new Look("Z", "M2 U M2 U M' U2 M2 U2 M' U2", null);
+
+    /** Công thức PLL theo tên (Aa, Ab, Y, Ua, Ub, H, Z) — dùng cho test đối chiếu với màn Luyện tập. */
+    static List<String> pllFormula(String name) {
+        for (Look l : new Look[]{AA, AB, Y, UA, UB, PH, PZ}) {
+            if (l.name.equals(name)) {
+                return l.alg;
+            }
+        }
+        return null;
+    }
 
     // ------------------------------------------------------------ đo trạng thái
     static int uEdgesOriented(Cube c) {
